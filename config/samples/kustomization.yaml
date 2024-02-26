@@ -1,0 +1,6 @@
+## Append samples of your project ##
+resources:
+- _v1alpha1_velerobackup.yaml
+- _v1alpha1_veleroschedule.yaml
+- _v1alpha1_velerorestore.yaml
+#+kubebuilder:scaffold:manifestskustomizesamples
