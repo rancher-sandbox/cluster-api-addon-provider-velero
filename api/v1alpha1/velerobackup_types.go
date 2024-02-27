@@ -42,7 +42,7 @@ type VeleroBackupStatus struct {
 }
 
 // BackupStatuses is a mapping of the cluster name to backup status
-type BackupStatuses map[ClusterName]BackupStatus
+type BackupStatuses map[NamespaceName]BackupStatus
 
 // BackupStatus is representing status of an individual Backup resouce
 type BackupStatus struct {
@@ -78,7 +78,7 @@ func (v *VeleroBackup) GetInstallRef() *corev1.ObjectReference {
 	return v.Spec.Installation.Ref
 }
 
-func (v *VeleroBackup) SetClusterStatus(key ClusterName, backup *velerov1.Backup) {
+func (v *VeleroBackup) SetClusterStatus(key NamespaceName, backup *velerov1.Backup) {
 	if v.Status.Statuses == nil {
 		v.Status.Statuses = BackupStatuses{}
 	}

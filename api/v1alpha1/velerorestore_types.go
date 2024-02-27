@@ -43,7 +43,7 @@ type VeleroRestoreStatus struct {
 }
 
 // Statuses is a mapping of the cluster name to Restore status
-type RestoreStatuses map[ClusterName]RestoreStatus
+type RestoreStatuses map[NamespaceName]RestoreStatus
 
 // RestoreStatus is representing status of an individual Restore resouce
 type RestoreStatus struct {
@@ -79,7 +79,7 @@ func (v *VeleroRestore) GetInstallRef() *corev1.ObjectReference {
 	return v.Spec.Installation.Ref
 }
 
-func (v *VeleroRestore) SetClusterStatus(key ClusterName, restore *velerov1.Restore) {
+func (v *VeleroRestore) SetClusterStatus(key NamespaceName, restore *velerov1.Restore) {
 	if v.Status.Statuses == nil {
 		v.Status.Statuses = RestoreStatuses{}
 	}

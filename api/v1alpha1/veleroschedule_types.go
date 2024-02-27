@@ -42,7 +42,7 @@ type VeleroScheduleStatus struct {
 }
 
 // ScheduleStatuses is a mapping of the cluster name to schedule status
-type ScheduleStatuses map[ClusterName]ScheduleStatus
+type ScheduleStatuses map[NamespaceName]ScheduleStatus
 
 // ScheduleStatus is representing status of an individual Schedule resouce
 type ScheduleStatus struct {
@@ -78,7 +78,7 @@ func (v *VeleroSchedule) GetInstallRef() *corev1.ObjectReference {
 	return v.Spec.Installation.Ref
 }
 
-func (v *VeleroSchedule) SetClusterStatus(key ClusterName, schedule *velerov1.Schedule) {
+func (v *VeleroSchedule) SetClusterStatus(key NamespaceName, schedule *velerov1.Schedule) {
 	if v.Status.Statuses == nil {
 		v.Status.Statuses = ScheduleStatuses{}
 	}

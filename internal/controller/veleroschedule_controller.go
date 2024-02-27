@@ -39,9 +39,11 @@ type VeleroScheduleReconciler struct {
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *VeleroScheduleReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager, options controller.Options) error {
-	return r.Reconciler.SetupWithManager(ctx, mgr, options).Complete(
+func (r *VeleroScheduleReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager, options controller.Options) (err error) {
+	r.Controller, err = r.Reconciler.SetupWithManager(ctx, mgr, options).Build(
 		reconcile.AsReconciler(r.Client, AsVeleroReconciler(r.Client, r)))
+
+	return
 }
 
 //+kubebuilder:rbac:groups=addons.cluster.x-k8s.io,resources=veleroschedules,verbs=get;list;watch;create;update;patch;delete
@@ -65,6 +67,9 @@ func (r *VeleroScheduleReconciler) ReconcileProxy(ctx context.Context, installat
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      schedule.Name,
 			Namespace: "default",
+			Annotations: map[string]string{
+				proxyKeyAnnotation: string(veleroaddonv1.ToNamespaceName(schedule)),
+			},
 		},
 		Spec: schedule.Spec.ScheduleSpec,
 	}
@@ -77,6 +82,10 @@ func (r *VeleroScheduleReconciler) GetObject() client.Object {
 	return &veleroaddonv1.VeleroSchedule{}
 }
 
-func (r *VeleroScheduleReconciler) UpdateRemote(ctx context.Context, schedule *veleroaddonv1.VeleroSchedule) error {
+func (r *VeleroScheduleReconciler) UpdateRemote(ctx context.Context, schedule *veleroaddonv1.VeleroSchedule) (ctrl.Result, error) {
 	return r.Reconciler.UpdateRemote(ctx, r.Installation, schedule, r.Schedule)
+}
+
+func (r *VeleroScheduleReconciler) CleanupRemote(ctx context.Context, schedule *veleroaddonv1.VeleroSchedule) (ctrl.Result, error) {
+	return r.Reconciler.CleanupRemote(ctx, r.Installation, schedule, r.Schedule)
 }

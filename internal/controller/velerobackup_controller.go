@@ -37,9 +37,11 @@ type VeleroBackupReconciler struct {
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *VeleroBackupReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager, options controller.Options) error {
-	return r.Reconciler.SetupWithManager(ctx, mgr, options).Complete(
+func (r *VeleroBackupReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager, options controller.Options) (err error) {
+	r.Controller, err = r.Reconciler.SetupWithManager(ctx, mgr, options).Build(
 		reconcile.AsReconciler(r.Client, AsVeleroReconciler(r.Client, r)))
+
+	return
 }
 
 //+kubebuilder:rbac:groups=addons.cluster.x-k8s.io,resources=velerobackups,verbs=get;list;watch;create;update;patch;delete
@@ -63,6 +65,9 @@ func (r *VeleroBackupReconciler) ReconcileProxy(ctx context.Context, installatio
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      backup.Name,
 			Namespace: "default",
+			Annotations: map[string]string{
+				proxyKeyAnnotation: string(veleroaddonv1.ToNamespaceName(backup)),
+			},
 		},
 		Spec: backup.Spec.BackupSpec,
 	}
@@ -70,6 +75,10 @@ func (r *VeleroBackupReconciler) ReconcileProxy(ctx context.Context, installatio
 	return ctrl.Result{}, nil
 }
 
-func (r *VeleroBackupReconciler) UpdateRemote(ctx context.Context, backup *veleroaddonv1.VeleroBackup) error {
+func (r *VeleroBackupReconciler) UpdateRemote(ctx context.Context, backup *veleroaddonv1.VeleroBackup) (ctrl.Result, error) {
 	return r.Reconciler.UpdateRemote(ctx, r.Installation, backup, r.Backup)
+}
+
+func (r *VeleroBackupReconciler) CleanupRemote(ctx context.Context, backup *veleroaddonv1.VeleroBackup) (ctrl.Result, error) {
+	return r.Reconciler.CleanupRemote(ctx, r.Installation, backup, r.Backup)
 }
