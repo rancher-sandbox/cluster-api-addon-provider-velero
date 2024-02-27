@@ -23,11 +23,10 @@ import (
 	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	addonsclusterxk8siov1alpha1 "addons.cluster.x-k8s.io/cluster-api-addon-provider-velero/api/v1alpha1"
+	veleroaddonv1 "addons.cluster.x-k8s.io/cluster-api-addon-provider-velero/api/v1alpha1"
 )
 
 var _ = Describe("VeleroSchedule Controller", func() {
@@ -40,13 +39,13 @@ var _ = Describe("VeleroSchedule Controller", func() {
 			Name:      resourceName,
 			Namespace: "default", // TODO(user):Modify as needed
 		}
-		veleroschedule := &addonsclusterxk8siov1alpha1.VeleroSchedule{}
+		veleroschedule := &veleroaddonv1.VeleroSchedule{}
 
 		BeforeEach(func() {
 			By("creating the custom resource for the Kind VeleroSchedule")
 			err := k8sClient.Get(ctx, typeNamespacedName, veleroschedule)
 			if err != nil && errors.IsNotFound(err) {
-				resource := &addonsclusterxk8siov1alpha1.VeleroSchedule{
+				resource := &veleroaddonv1.VeleroSchedule{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      resourceName,
 						Namespace: "default",
@@ -59,7 +58,7 @@ var _ = Describe("VeleroSchedule Controller", func() {
 
 		AfterEach(func() {
 			// TODO(user): Cleanup logic after each test, like removing the resource instance.
-			resource := &addonsclusterxk8siov1alpha1.VeleroSchedule{}
+			resource := &veleroaddonv1.VeleroSchedule{}
 			err := k8sClient.Get(ctx, typeNamespacedName, resource)
 			Expect(err).NotTo(HaveOccurred())
 
@@ -69,13 +68,14 @@ var _ = Describe("VeleroSchedule Controller", func() {
 		It("should successfully reconcile the resource", func() {
 			By("Reconciling the created resource")
 			controllerReconciler := &VeleroScheduleReconciler{
-				Client: k8sClient,
+				Reconciler: Reconciler[*veleroaddonv1.VeleroSchedule]{
+					Client:  k8sClient,
+					Tracker: nil,
+				},
 				Scheme: k8sClient.Scheme(),
 			}
 
-			_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
-				NamespacedName: typeNamespacedName,
-			})
+			_, err := controllerReconciler.ReconcileProxy(ctx, nil, nil)
 			Expect(err).NotTo(HaveOccurred())
 			// TODO(user): Add more specific assertions depending on your controller's reconciliation logic.
 			// Example: If you expect a certain status condition after reconciliation, verify it here.

@@ -17,6 +17,7 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"crypto/tls"
 	"flag"
 	"os"
@@ -28,14 +29,21 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	"sigs.k8s.io/cluster-api/controllers/remote"
 	ctrl "sigs.k8s.io/controller-runtime"
+	controller "sigs.k8s.io/controller-runtime/pkg/controller"
+
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
-	addonsclusterxk8siov1alpha1 "addons.cluster.x-k8s.io/cluster-api-addon-provider-velero/api/v1alpha1"
-	"addons.cluster.x-k8s.io/cluster-api-addon-provider-velero/internal/controller"
+	veleroaddonv1 "addons.cluster.x-k8s.io/cluster-api-addon-provider-velero/api/v1alpha1"
+	addonscontroller "addons.cluster.x-k8s.io/cluster-api-addon-provider-velero/internal/controller"
+	velerov1 "github.com/vmware-tanzu/velero/pkg/apis/velero/v1"
+	helmv1 "sigs.k8s.io/cluster-api-addon-provider-helm/api/v1alpha1"
+	operatorv1 "sigs.k8s.io/cluster-api-operator/api/v1alpha2"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -46,8 +54,12 @@ var (
 
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
+	utilruntime.Must(clusterv1.AddToScheme(scheme))
+	utilruntime.Must(operatorv1.AddToScheme(scheme))
+	utilruntime.Must(helmv1.AddToScheme(scheme))
 
-	utilruntime.Must(addonsclusterxk8siov1alpha1.AddToScheme(scheme))
+	utilruntime.Must(veleroaddonv1.AddToScheme(scheme))
+	utilruntime.Must(velerov1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 
@@ -71,6 +83,8 @@ func main() {
 	}
 	opts.BindFlags(flag.CommandLine)
 	flag.Parse()
+
+	ctx := context.Background()
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
@@ -122,25 +136,61 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = (&controller.VeleroBackupReconciler{
-		Client: mgr.GetClient(),
+	tracker, err := remote.NewClusterCacheTracker(mgr, remote.ClusterCacheTrackerOptions{
+		Log: &ctrl.Log,
+	})
+	if err != nil {
+		setupLog.Error(err, "unable to create remote cache tracker", "controller", "VeleroBackup")
+		os.Exit(1)
+	}
+
+	options := controller.Options{
+		MaxConcurrentReconciles: 5,
+	}
+
+	if err := (&remote.ClusterCacheReconciler{
+		Client:  mgr.GetClient(),
+		Tracker: tracker,
+	}).SetupWithManager(ctx, mgr, options); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "ClusterCacheReconciler")
+		os.Exit(1)
+	}
+
+	if err = (&addonscontroller.VeleroBackupReconciler{
+		Reconciler: addonscontroller.Reconciler[*veleroaddonv1.VeleroBackup]{
+			Client:  mgr.GetClient(),
+			Tracker: tracker,
+		},
 		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
+	}).SetupWithManager(ctx, mgr, options); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "VeleroBackup")
 		os.Exit(1)
 	}
-	if err = (&controller.VeleroScheduleReconciler{
-		Client: mgr.GetClient(),
+	if err = (&addonscontroller.VeleroScheduleReconciler{
+		Reconciler: addonscontroller.Reconciler[*veleroaddonv1.VeleroSchedule]{
+			Client:  mgr.GetClient(),
+			Tracker: tracker,
+		},
 		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
+	}).SetupWithManager(ctx, mgr, options); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "VeleroSchedule")
 		os.Exit(1)
 	}
-	if err = (&controller.VeleroRestoreReconciler{
+	if err = (&addonscontroller.VeleroRestoreReconciler{
+		Reconciler: addonscontroller.Reconciler[*veleroaddonv1.VeleroRestore]{
+			Client:  mgr.GetClient(),
+			Tracker: tracker,
+		},
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(ctx, mgr, options); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "VeleroRestore")
+		os.Exit(1)
+	}
+	if err = (&addonscontroller.VeleroInstallationReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "VeleroRestore")
+		setupLog.Error(err, "unable to create controller", "controller", "VeleroInstallation")
 		os.Exit(1)
 	}
 	//+kubebuilder:scaffold:builder

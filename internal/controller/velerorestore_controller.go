@@ -19,18 +19,29 @@ package controller
 import (
 	"context"
 
+	veleroaddonv1 "addons.cluster.x-k8s.io/cluster-api-addon-provider-velero/api/v1alpha1"
+	velerov1 "github.com/vmware-tanzu/velero/pkg/apis/velero/v1"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/log"
-
-	addonsclusterxk8siov1alpha1 "addons.cluster.x-k8s.io/cluster-api-addon-provider-velero/api/v1alpha1"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 // VeleroRestoreReconciler reconciles a VeleroRestore object
 type VeleroRestoreReconciler struct {
-	client.Client
-	Scheme *runtime.Scheme
+	Reconciler[*veleroaddonv1.VeleroRestore]
+	Scheme  *runtime.Scheme
+	Restore *velerov1.Restore
+}
+
+// SetupWithManager sets up the controller with the Manager.
+func (r *VeleroRestoreReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager, options controller.Options) error {
+	return r.Reconciler.SetupWithManager(ctx, mgr, options).Complete(
+		reconcile.AsReconciler(r.Client, AsVeleroReconciler(r.Client, r)))
 }
 
 //+kubebuilder:rbac:groups=addons.cluster.x-k8s.io,resources=velerorestores,verbs=get;list;watch;create;update;patch;delete
@@ -46,17 +57,26 @@ type VeleroRestoreReconciler struct {
 //
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.17.0/pkg/reconcile
-func (r *VeleroRestoreReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *VeleroRestoreReconciler) ReconcileProxy(ctx context.Context, installation *veleroaddonv1.VeleroInstallation, restore *veleroaddonv1.VeleroRestore) (ctrl.Result, error) {
 	_ = log.FromContext(ctx)
 
+	r.Installation = installation
+	r.Restore = &velerov1.Restore{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      restore.Name,
+			Namespace: "default",
+		},
+		Spec: restore.Spec.Restore.Spec,
+	}
 	// TODO(user): your logic here
 
 	return ctrl.Result{}, nil
 }
 
-// SetupWithManager sets up the controller with the Manager.
-func (r *VeleroRestoreReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewControllerManagedBy(mgr).
-		For(&addonsclusterxk8siov1alpha1.VeleroRestore{}).
-		Complete(r)
+func (r *VeleroRestoreReconciler) GetObject() client.Object {
+	return &veleroaddonv1.VeleroRestore{}
+}
+
+func (r *VeleroRestoreReconciler) UpdateRemote(ctx context.Context) error {
+	return r.Reconciler.UpdateRemote(ctx, r.Installation, r.Restore)
 }
