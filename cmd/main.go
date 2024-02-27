@@ -157,7 +157,7 @@ func main() {
 	}
 
 	if err = (&addonscontroller.VeleroBackupReconciler{
-		Reconciler: addonscontroller.Reconciler[*veleroaddonv1.VeleroBackup]{
+		Reconciler: addonscontroller.Reconciler[*veleroaddonv1.VeleroBackup, *velerov1.Backup]{
 			Client:  mgr.GetClient(),
 			Tracker: tracker,
 		},
@@ -167,7 +167,7 @@ func main() {
 		os.Exit(1)
 	}
 	if err = (&addonscontroller.VeleroScheduleReconciler{
-		Reconciler: addonscontroller.Reconciler[*veleroaddonv1.VeleroSchedule]{
+		Reconciler: addonscontroller.Reconciler[*veleroaddonv1.VeleroSchedule, *velerov1.Schedule]{
 			Client:  mgr.GetClient(),
 			Tracker: tracker,
 		},
@@ -177,7 +177,7 @@ func main() {
 		os.Exit(1)
 	}
 	if err = (&addonscontroller.VeleroRestoreReconciler{
-		Reconciler: addonscontroller.Reconciler[*veleroaddonv1.VeleroRestore]{
+		Reconciler: addonscontroller.Reconciler[*veleroaddonv1.VeleroRestore, *velerov1.Restore]{
 			Client:  mgr.GetClient(),
 			Tracker: tracker,
 		},

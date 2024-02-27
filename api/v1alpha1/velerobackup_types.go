@@ -29,7 +29,7 @@ import (
 // VeleroBackupSpec defines the desired state of VeleroBackup
 type VeleroBackupSpec struct {
 	// Backup is representing velero backup spec
-	Backup velerov1.BackupSpec `json:",inline"`
+	velerov1.BackupSpec `json:",inline"`
 
 	// Installation is a helm chart proxy reference to use
 	Installation clusterv1.LocalObjectTemplate `json:"installation,omitempty"`
@@ -46,7 +46,7 @@ type BackupStatuses map[ClusterName]BackupStatus
 
 // BackupStatus is representing status of an individual Backup resouce
 type BackupStatus struct {
-	*velerov1.BackupStatus `json:",inline"`
+	velerov1.BackupStatus `json:",inline"`
 }
 
 //+kubebuilder:object:root=true
@@ -76,4 +76,13 @@ func init() {
 
 func (v *VeleroBackup) GetInstallRef() *corev1.ObjectReference {
 	return v.Spec.Installation.Ref
+}
+
+func (v *VeleroBackup) SetClusterStatus(key ClusterName, backup *velerov1.Backup) {
+	if v.Status.Statuses == nil {
+		v.Status.Statuses = BackupStatuses{}
+	}
+	v.Status.Statuses[key] = BackupStatus{
+		BackupStatus: backup.Status,
+	}
 }

@@ -33,7 +33,7 @@ import (
 
 // VeleroScheduleReconciler reconciles a VeleroSchedule object
 type VeleroScheduleReconciler struct {
-	Reconciler[*veleroaddonv1.VeleroSchedule]
+	Reconciler[*veleroaddonv1.VeleroSchedule, *velerov1.Schedule]
 	Scheme   *runtime.Scheme
 	Schedule *velerov1.Schedule
 }
@@ -66,7 +66,7 @@ func (r *VeleroScheduleReconciler) ReconcileProxy(ctx context.Context, installat
 			Name:      schedule.Name,
 			Namespace: "default",
 		},
-		Spec: schedule.Spec.Schedule,
+		Spec: schedule.Spec.ScheduleSpec,
 	}
 	// TODO(user): your logic here
 
@@ -77,6 +77,6 @@ func (r *VeleroScheduleReconciler) GetObject() client.Object {
 	return &veleroaddonv1.VeleroSchedule{}
 }
 
-func (r *VeleroScheduleReconciler) UpdateRemote(ctx context.Context) error {
-	return r.Reconciler.UpdateRemote(ctx, r.Installation, r.Schedule)
+func (r *VeleroScheduleReconciler) UpdateRemote(ctx context.Context, schedule *veleroaddonv1.VeleroSchedule) error {
+	return r.Reconciler.UpdateRemote(ctx, r.Installation, schedule, r.Schedule)
 }

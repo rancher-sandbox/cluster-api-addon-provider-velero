@@ -29,7 +29,7 @@ import (
 // VeleroScheduleSpec defines the desired state of VeleroSchedule
 type VeleroScheduleSpec struct {
 	// Schedule is representing velero Schedule spec
-	Schedule velerov1.ScheduleSpec `json:",inline"`
+	velerov1.ScheduleSpec `json:",inline"`
 
 	// Installation is a helm chart proxy reference to use
 	Installation clusterv1.LocalObjectTemplate `json:"installation,omitempty"`
@@ -46,7 +46,7 @@ type ScheduleStatuses map[ClusterName]ScheduleStatus
 
 // ScheduleStatus is representing status of an individual Schedule resouce
 type ScheduleStatus struct {
-	*velerov1.ScheduleStatus `json:",inline"`
+	velerov1.ScheduleStatus `json:",inline"`
 }
 
 //+kubebuilder:object:root=true
@@ -76,4 +76,13 @@ func init() {
 
 func (v *VeleroSchedule) GetInstallRef() *corev1.ObjectReference {
 	return v.Spec.Installation.Ref
+}
+
+func (v *VeleroSchedule) SetClusterStatus(key ClusterName, schedule *velerov1.Schedule) {
+	if v.Status.Statuses == nil {
+		v.Status.Statuses = ScheduleStatuses{}
+	}
+	v.Status.Statuses[key] = ScheduleStatus{
+		ScheduleStatus: schedule.Status,
+	}
 }

@@ -18,6 +18,7 @@ package controller
 
 import (
 	"context"
+	"errors"
 	"reflect"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -35,46 +36,46 @@ import (
 )
 
 // GenericReconciler is a generic interface for velero objects reconciler
-type GenericReconciler[T veleroaddonv1.InstalledObject] interface {
+type GenericReconciler[T veleroaddonv1.VeleroProxy[V], V veleroaddonv1.VeleroOrigin] interface {
 	client.Client
 	GetTracker() *remote.ClusterCacheTracker
 }
 
-type Reconciler[T veleroaddonv1.InstalledObject] struct {
+type Reconciler[T veleroaddonv1.VeleroProxy[V], V veleroaddonv1.VeleroOrigin] struct {
 	client.Client
 	Tracker      *remote.ClusterCacheTracker
 	Installation *veleroaddonv1.VeleroInstallation
 }
 
-type VeleroReconciler[T veleroaddonv1.InstalledObject] interface {
-	UpdateRemote(ctx context.Context) error
-	ReconcileProxy(context.Context, *veleroaddonv1.VeleroInstallation, T) (reconcile.Result, error)
+type VeleroReconciler[T veleroaddonv1.VeleroProxy[V], V veleroaddonv1.VeleroOrigin] interface {
+	UpdateRemote(ctx context.Context, proxy T) error
+	ReconcileProxy(ctx context.Context, i *veleroaddonv1.VeleroInstallation, proxy T) (reconcile.Result, error)
 }
 
 // AsVeleroReconciler creates a Reconciler based on the given ObjectReconciler.
-func AsVeleroReconciler[T veleroaddonv1.InstalledObject](client client.Client, rec VeleroReconciler[T]) reconcile.ObjectReconciler[T] {
-	return &Adapter[T]{
+func AsVeleroReconciler[T veleroaddonv1.VeleroProxy[V], V veleroaddonv1.VeleroOrigin](client client.Client, rec VeleroReconciler[T, V]) reconcile.ObjectReconciler[T] {
+	return &Adapter[T, V]{
 		objReconciler: rec,
 		client:        client,
 	}
 }
 
-type Adapter[T veleroaddonv1.InstalledObject] struct {
-	objReconciler VeleroReconciler[T]
+type Adapter[T veleroaddonv1.VeleroProxy[V], V veleroaddonv1.VeleroOrigin] struct {
+	objReconciler VeleroReconciler[T, V]
 	client        client.Client
 }
 
 // ReconcileProxy implements VeleroReconciler.
-func (a *Adapter[T]) ReconcileProxy(ctx context.Context, i *veleroaddonv1.VeleroInstallation, o T) (reconcile.Result, error) {
+func (a *Adapter[T, V]) ReconcileProxy(ctx context.Context, i *veleroaddonv1.VeleroInstallation, o T) (reconcile.Result, error) {
 	if res, err := a.objReconciler.ReconcileProxy(ctx, i, o); err != nil || res.Requeue || res.RequeueAfter > 0 {
 		return res, err
 	}
 
-	return reconcile.Result{}, a.objReconciler.UpdateRemote(ctx)
+	return reconcile.Result{}, a.objReconciler.UpdateRemote(ctx, o)
 }
 
 // Reconcile implements Reconciler.
-func (a *Adapter[T]) Reconcile(ctx context.Context, o T) (reconcile.Result, error) {
+func (a *Adapter[T, V]) Reconcile(ctx context.Context, o T) (reconcile.Result, error) {
 	ref := o.GetInstallRef()
 	if ref == nil {
 		return reconcile.Result{}, nil
@@ -91,38 +92,43 @@ func (a *Adapter[T]) Reconcile(ctx context.Context, o T) (reconcile.Result, erro
 	return a.ReconcileProxy(ctx, i, o)
 }
 
-func (r *Reconciler[T]) GetTracker() *remote.ClusterCacheTracker {
+func (r *Reconciler[T, V]) GetTracker() *remote.ClusterCacheTracker {
 	return r.Tracker
 }
 
-func (r *Reconciler[T]) UpdateRemote(ctx context.Context, installation *veleroaddonv1.VeleroInstallation, obj client.Object) error {
-	var errors []error
+func (r *Reconciler[T, V]) UpdateRemote(ctx context.Context, installation *veleroaddonv1.VeleroInstallation, proxy T, obj V) error {
+	var errs []error
 
 	for _, clusterRef := range installation.Status.MatchingClusters {
 		clusterKey := types.NamespacedName{Name: clusterRef.Name, Namespace: clusterRef.Namespace}
-		if cl, err := r.GetTracker().GetClient(ctx, clusterKey); err != nil {
-			errors = append(errors, err)
-		} else if err := cl.Get(ctx, client.ObjectKeyFromObject(obj), obj); apierrors.IsNotFound(err) {
-			errors = append(errors, cl.Create(ctx, obj))
+		if cl, err := r.GetTracker().GetClient(ctx, clusterKey); errors.Is(err, remote.ErrClusterLocked) {
+			continue
 		} else if err != nil {
-			errors = append(errors, err)
+			errs = append(errs, err)
+		} else if err := cl.Get(ctx, client.ObjectKeyFromObject(obj), obj); apierrors.IsNotFound(err) {
+			errs = append(errs, cl.Create(ctx, obj))
+		} else if err != nil {
+			errs = append(errs, err)
+		} else if err := cl.Update(ctx, obj); err != nil {
+			errs = append(errs, err)
 		} else {
-			errors = append(errors, cl.Update(ctx, obj))
+			proxy.SetClusterStatus(veleroaddonv1.ClusterName(clusterKey.String()), obj)
+			errs = append(errs, r.Status().Update(ctx, proxy))
 		}
 	}
 
-	return kerrors.NewAggregate(errors)
+	return kerrors.NewAggregate(errs)
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *Reconciler[T]) SetupWithManager(ctx context.Context, mgr ctrl.Manager, options controller.Options) *builder.Builder {
+func (r *Reconciler[T, V]) SetupWithManager(ctx context.Context, mgr ctrl.Manager, options controller.Options) *builder.Builder {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(reflect.New(reflect.TypeOf(*new(T)).Elem()).Interface().(T), builder.WithPredicates(
 			predicate.NewPredicateFuncs(r.onlyWithInstallation(ctx)))).
 		WithOptions(options)
 }
 
-func (r *Reconciler[T]) onlyWithInstallation(ctx context.Context) func(client.Object) bool {
+func (r *Reconciler[T, V]) onlyWithInstallation(ctx context.Context) func(client.Object) bool {
 	return func(obj client.Object) bool {
 		ref := obj.(T).GetInstallRef()
 		installation := reflect.New(reflect.TypeOf(*new(T)).Elem()).Interface().(T)

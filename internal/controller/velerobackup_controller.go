@@ -31,7 +31,7 @@ import (
 
 // VeleroBackupReconciler reconciles a VeleroBackup object
 type VeleroBackupReconciler struct {
-	Reconciler[*veleroaddonv1.VeleroBackup]
+	Reconciler[*veleroaddonv1.VeleroBackup, *velerov1.Backup]
 	Scheme *runtime.Scheme
 	Backup *velerov1.Backup
 }
@@ -64,12 +64,12 @@ func (r *VeleroBackupReconciler) ReconcileProxy(ctx context.Context, installatio
 			Name:      backup.Name,
 			Namespace: "default",
 		},
-		Spec: backup.Spec.Backup,
+		Spec: backup.Spec.BackupSpec,
 	}
 
 	return ctrl.Result{}, nil
 }
 
-func (r *VeleroBackupReconciler) UpdateRemote(ctx context.Context) error {
-	return r.Reconciler.UpdateRemote(ctx, r.Installation, r.Backup)
+func (r *VeleroBackupReconciler) UpdateRemote(ctx context.Context, backup *veleroaddonv1.VeleroBackup) error {
+	return r.Reconciler.UpdateRemote(ctx, r.Installation, backup, r.Backup)
 }

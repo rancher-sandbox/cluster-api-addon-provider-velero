@@ -9,6 +9,7 @@ metadata:
     app.kubernetes.io/created-by: cluster-api-addon-provider-velero
   name: velerorestore-sample
 spec:
+  backupName: test
   installation:
     ref:
       kind: VeleroInstallation

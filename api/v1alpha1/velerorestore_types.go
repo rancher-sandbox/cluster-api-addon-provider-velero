@@ -30,7 +30,7 @@ import (
 // VeleroRestoreSpec defines the desired state of VeleroRestore
 type VeleroRestoreSpec struct {
 	// Restore is representing velero restore spec
-	Restore velerov1.Restore `json:",inline"`
+	velerov1.RestoreSpec `json:",inline"`
 
 	// Installation is a helm chart proxy reference to use
 	Installation clusterv1.LocalObjectTemplate `json:"installation,omitempty"`
@@ -47,7 +47,7 @@ type RestoreStatuses map[ClusterName]RestoreStatus
 
 // RestoreStatus is representing status of an individual Restore resouce
 type RestoreStatus struct {
-	Status velerov1.BackupStatus `json:",inline"`
+	velerov1.RestoreStatus `json:",inline"`
 }
 
 //+kubebuilder:object:root=true
@@ -77,4 +77,13 @@ func init() {
 
 func (v *VeleroRestore) GetInstallRef() *corev1.ObjectReference {
 	return v.Spec.Installation.Ref
+}
+
+func (v *VeleroRestore) SetClusterStatus(key ClusterName, restore *velerov1.Restore) {
+	if v.Status.Statuses == nil {
+		v.Status.Statuses = RestoreStatuses{}
+	}
+	v.Status.Statuses[key] = RestoreStatus{
+		RestoreStatus: restore.Status,
+	}
 }

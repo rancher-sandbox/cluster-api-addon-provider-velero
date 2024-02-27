@@ -33,7 +33,7 @@ import (
 
 // VeleroRestoreReconciler reconciles a VeleroRestore object
 type VeleroRestoreReconciler struct {
-	Reconciler[*veleroaddonv1.VeleroRestore]
+	Reconciler[*veleroaddonv1.VeleroRestore, *velerov1.Restore]
 	Scheme  *runtime.Scheme
 	Restore *velerov1.Restore
 }
@@ -66,7 +66,7 @@ func (r *VeleroRestoreReconciler) ReconcileProxy(ctx context.Context, installati
 			Name:      restore.Name,
 			Namespace: "default",
 		},
-		Spec: restore.Spec.Restore.Spec,
+		Spec: restore.Spec.RestoreSpec,
 	}
 	// TODO(user): your logic here
 
@@ -77,6 +77,6 @@ func (r *VeleroRestoreReconciler) GetObject() client.Object {
 	return &veleroaddonv1.VeleroRestore{}
 }
 
-func (r *VeleroRestoreReconciler) UpdateRemote(ctx context.Context) error {
-	return r.Reconciler.UpdateRemote(ctx, r.Installation, r.Restore)
+func (r *VeleroRestoreReconciler) UpdateRemote(ctx context.Context, restore *veleroaddonv1.VeleroRestore) error {
+	return r.Reconciler.UpdateRemote(ctx, r.Installation, restore, r.Restore)
 }

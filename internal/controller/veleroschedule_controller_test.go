@@ -21,6 +21,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	velerov1 "github.com/vmware-tanzu/velero/pkg/apis/velero/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 
@@ -68,7 +69,7 @@ var _ = Describe("VeleroSchedule Controller", func() {
 		It("should successfully reconcile the resource", func() {
 			By("Reconciling the created resource")
 			controllerReconciler := &VeleroScheduleReconciler{
-				Reconciler: Reconciler[*veleroaddonv1.VeleroSchedule]{
+				Reconciler: Reconciler[*veleroaddonv1.VeleroSchedule, *velerov1.Schedule]{
 					Client:  k8sClient,
 					Tracker: nil,
 				},
