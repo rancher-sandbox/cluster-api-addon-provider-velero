@@ -32,4 +32,12 @@ resources:
   kind: VeleroRestore
   path: addons.cluster.x-k8s.io/cluster-api-addon-provider-velero/api/v1alpha1
   version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: addons.cluster.x-k8s.io
+  kind: VeleroInstallation
+  path: addons.cluster.x-k8s.io/cluster-api-addon-provider-velero/api/v1alpha1
+  version: v1alpha1
 version: "3"

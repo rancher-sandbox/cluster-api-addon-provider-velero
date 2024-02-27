@@ -3,4 +3,5 @@ resources:
 - _v1alpha1_velerobackup.yaml
 - _v1alpha1_veleroschedule.yaml
 - _v1alpha1_velerorestore.yaml
+- _v1alpha1_veleroinstallation.yaml
 #+kubebuilder:scaffold:manifestskustomizesamples

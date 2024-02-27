@@ -17,7 +17,11 @@ limitations under the License.
 package v1alpha1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+
+	velerov1 "github.com/vmware-tanzu/velero/pkg/apis/velero/v1"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -25,17 +29,25 @@ import (
 
 // VeleroRestoreSpec defines the desired state of VeleroRestore
 type VeleroRestoreSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	// Restore is representing velero restore spec
+	Restore velerov1.Restore `json:",inline"`
 
-	// Foo is an example field of VeleroRestore. Edit velerorestore_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	// Installation is a helm chart proxy reference to use
+	Installation clusterv1.LocalObjectTemplate `json:"installation,omitempty"`
 }
 
 // VeleroRestoreStatus defines the observed state of VeleroRestore
 type VeleroRestoreStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	// Status is representing velero Restore status
+	Statuses RestoreStatuses `json:"statuses,omitempty"`
+}
+
+// Statuses is a mapping of the cluster name to Restore status
+type RestoreStatuses map[ClusterName]RestoreStatus
+
+// RestoreStatus is representing status of an individual Restore resouce
+type RestoreStatus struct {
+	Status velerov1.BackupStatus `json:",inline"`
 }
 
 //+kubebuilder:object:root=true
@@ -61,4 +73,8 @@ type VeleroRestoreList struct {
 
 func init() {
 	SchemeBuilder.Register(&VeleroRestore{}, &VeleroRestoreList{})
+}
+
+func (v *VeleroRestore) GetInstallRef() *corev1.ObjectReference {
+	return v.Spec.Installation.Ref
 }

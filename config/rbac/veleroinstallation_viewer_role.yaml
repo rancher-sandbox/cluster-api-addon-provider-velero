@@ -1,0 +1,27 @@
+# permissions for end users to view veleroinstallations.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: clusterrole
+    app.kubernetes.io/instance: veleroinstallation-viewer-role
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: cluster-api-addon-provider-velero
+    app.kubernetes.io/part-of: cluster-api-addon-provider-velero
+    app.kubernetes.io/managed-by: kustomize
+  name: veleroinstallation-viewer-role
+rules:
+- apiGroups:
+  - addons.cluster.x-k8s.io
+  resources:
+  - veleroinstallations
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - addons.cluster.x-k8s.io
+  resources:
+  - veleroinstallations/status
+  verbs:
+  - get
