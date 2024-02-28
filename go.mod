@@ -6,7 +6,6 @@ require (
 	github.com/onsi/ginkgo/v2 v2.15.0
 	github.com/onsi/gomega v1.31.1
 	github.com/vmware-tanzu/velero v1.13.0
-	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.29.0
 	k8s.io/apimachinery v0.29.0
 	k8s.io/client-go v0.29.0
@@ -14,6 +13,7 @@ require (
 	sigs.k8s.io/cluster-api-addon-provider-helm v0.1.1-alpha.1
 	sigs.k8s.io/cluster-api-operator v0.8.1
 	sigs.k8s.io/controller-runtime v0.17.0
+	sigs.k8s.io/yaml v1.4.0
 )
 
 require (
@@ -67,6 +67,7 @@ require (
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/protobuf v1.31.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
+	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	k8s.io/apiextensions-apiserver v0.29.0 // indirect
 	k8s.io/cluster-bootstrap v0.28.4 // indirect
@@ -76,5 +77,4 @@ require (
 	k8s.io/utils v0.0.0-20240102154912-e7106e64919e // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.4.1 // indirect
-	sigs.k8s.io/yaml v1.4.0 // indirect
 )

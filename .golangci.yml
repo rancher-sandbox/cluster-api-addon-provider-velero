@@ -12,6 +12,7 @@ issues:
     - path: "api/*"
       linters:
         - lll
+        - dupl
     - path: "internal/*"
       linters:
         - dupl

@@ -45,7 +45,7 @@ type VeleroRestoreStatus struct {
 // Statuses is a mapping of the cluster name to Restore status
 type RestoreStatuses map[NamespaceName]RestoreStatus
 
-// RestoreStatus is representing status of an individual Restore resouce
+// RestoreStatus is representing status of an individual Restore resource
 type RestoreStatus struct {
 	velerov1.RestoreStatus `json:",inline"`
 }

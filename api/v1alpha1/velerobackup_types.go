@@ -44,7 +44,7 @@ type VeleroBackupStatus struct {
 // BackupStatuses is a mapping of the cluster name to backup status
 type BackupStatuses map[NamespaceName]BackupStatus
 
-// BackupStatus is representing status of an individual Backup resouce
+// BackupStatus is representing status of an individual Backup resource
 type BackupStatus struct {
 	velerov1.BackupStatus `json:",inline"`
 }

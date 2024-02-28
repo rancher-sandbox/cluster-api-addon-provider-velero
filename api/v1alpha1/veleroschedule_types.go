@@ -44,7 +44,7 @@ type VeleroScheduleStatus struct {
 // ScheduleStatuses is a mapping of the cluster name to schedule status
 type ScheduleStatuses map[NamespaceName]ScheduleStatus
 
-// ScheduleStatus is representing status of an individual Schedule resouce
+// ScheduleStatus is representing status of an individual Schedule resource
 type ScheduleStatus struct {
 	velerov1.ScheduleStatus `json:",inline"`
 }
