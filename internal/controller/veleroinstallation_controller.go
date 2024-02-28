@@ -23,7 +23,9 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/yaml"
 
 	veleroaddonv1 "addons.cluster.x-k8s.io/cluster-api-addon-provider-velero/api/v1alpha1"
@@ -51,13 +53,8 @@ type VeleroInstallationReconciler struct {
 //
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.17.0/pkg/reconcile
-func (r *VeleroInstallationReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *VeleroInstallationReconciler) Reconcile(ctx context.Context, installation *veleroaddonv1.VeleroInstallation) (ctrl.Result, error) {
 	_ = log.FromContext(ctx)
-
-	installation := &veleroaddonv1.VeleroInstallation{}
-	if err := r.Client.Get(ctx, req.NamespacedName, installation); err != nil {
-		return ctrl.Result{}, err
-	}
 
 	for _, plugin := range installation.Spec.State.Plugins {
 		switch plugin {
@@ -84,6 +81,10 @@ func (r *VeleroInstallationReconciler) Reconcile(ctx context.Context, req ctrl.R
 	helmSpec.ValuesTemplate = cmp.Or(helmSpec.ValuesTemplate, string(spec))
 
 	helmProxy := templateHelmChartProxy(installation, helmSpec)
+	if err := controllerutil.SetOwnerReference(installation, helmProxy, r.Client.Scheme()); err != nil {
+		return ctrl.Result{}, err
+	}
+
 	if err := r.Client.Patch(
 		ctx, helmProxy,
 		client.Apply, client.ForceOwnership, client.FieldOwner("velero-addon")); err != nil {
@@ -119,5 +120,5 @@ func (r *VeleroInstallationReconciler) SetupWithManager(mgr ctrl.Manager) error 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&veleroaddonv1.VeleroInstallation{}).
 		Owns(&helmv1.HelmChartProxy{}).
-		Complete(r)
+		Complete(reconcile.AsReconciler(r.Client, r))
 }

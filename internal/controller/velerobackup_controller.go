@@ -60,7 +60,6 @@ func (r *VeleroBackupReconciler) SetupWithManager(ctx context.Context, mgr ctrl.
 func (r *VeleroBackupReconciler) ReconcileProxy(ctx context.Context, installation *veleroaddonv1.VeleroInstallation, backup *veleroaddonv1.VeleroBackup) (ctrl.Result, error) {
 	_ = log.FromContext(ctx)
 
-	r.Installation = installation
 	r.Backup = &velerov1.Backup{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      backup.Name,
@@ -75,10 +74,10 @@ func (r *VeleroBackupReconciler) ReconcileProxy(ctx context.Context, installatio
 	return ctrl.Result{}, nil
 }
 
-func (r *VeleroBackupReconciler) UpdateRemote(ctx context.Context, backup *veleroaddonv1.VeleroBackup) (ctrl.Result, error) {
-	return r.Reconciler.UpdateRemote(ctx, r.Installation, backup, r.Backup)
+func (r *VeleroBackupReconciler) UpdateRemote(ctx context.Context, installation *veleroaddonv1.VeleroInstallation, backup *veleroaddonv1.VeleroBackup) (ctrl.Result, error) {
+	return r.Reconciler.UpdateRemote(ctx, installation, backup, r.Backup)
 }
 
-func (r *VeleroBackupReconciler) CleanupRemote(ctx context.Context, backup *veleroaddonv1.VeleroBackup) (ctrl.Result, error) {
-	return r.Reconciler.CleanupRemote(ctx, r.Installation, backup, r.Backup)
+func (r *VeleroBackupReconciler) CleanupRemote(ctx context.Context, installation *veleroaddonv1.VeleroInstallation, backup *veleroaddonv1.VeleroBackup) (ctrl.Result, error) {
+	return r.Reconciler.CleanupRemote(ctx, installation, backup, r.Backup)
 }

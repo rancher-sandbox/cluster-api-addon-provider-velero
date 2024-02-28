@@ -62,7 +62,6 @@ func (r *VeleroRestoreReconciler) SetupWithManager(ctx context.Context, mgr ctrl
 func (r *VeleroRestoreReconciler) ReconcileProxy(ctx context.Context, installation *veleroaddonv1.VeleroInstallation, restore *veleroaddonv1.VeleroRestore) (ctrl.Result, error) {
 	_ = log.FromContext(ctx)
 
-	r.Installation = installation
 	r.Restore = &velerov1.Restore{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      restore.Name,
@@ -82,10 +81,10 @@ func (r *VeleroRestoreReconciler) GetObject() client.Object {
 	return &veleroaddonv1.VeleroRestore{}
 }
 
-func (r *VeleroRestoreReconciler) UpdateRemote(ctx context.Context, restore *veleroaddonv1.VeleroRestore) (ctrl.Result, error) {
-	return r.Reconciler.UpdateRemote(ctx, r.Installation, restore, r.Restore)
+func (r *VeleroRestoreReconciler) UpdateRemote(ctx context.Context, installation *veleroaddonv1.VeleroInstallation, restore *veleroaddonv1.VeleroRestore) (ctrl.Result, error) {
+	return r.Reconciler.UpdateRemote(ctx, installation, restore, r.Restore)
 }
 
-func (r *VeleroRestoreReconciler) CleanupRemote(ctx context.Context, restore *veleroaddonv1.VeleroRestore) (ctrl.Result, error) {
-	return r.Reconciler.CleanupRemote(ctx, r.Installation, restore, r.Restore)
+func (r *VeleroRestoreReconciler) CleanupRemote(ctx context.Context, installation *veleroaddonv1.VeleroInstallation, restore *veleroaddonv1.VeleroRestore) (ctrl.Result, error) {
+	return r.Reconciler.CleanupRemote(ctx, installation, restore, r.Restore)
 }
