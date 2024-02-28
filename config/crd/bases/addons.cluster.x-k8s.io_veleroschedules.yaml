@@ -599,7 +599,7 @@ spec:
               statuses:
                 additionalProperties:
                   description: ScheduleStatus is representing status of an individual
-                    Schedule resouce
+                    Schedule resource
                   properties:
                     lastBackup:
                       description: |-
