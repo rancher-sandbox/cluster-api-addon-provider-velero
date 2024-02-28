@@ -1,6 +1,6 @@
 module addons.cluster.x-k8s.io/cluster-api-addon-provider-velero
 
-go 1.21
+go 1.22
 
 require (
 	github.com/onsi/ginkgo/v2 v2.15.0
