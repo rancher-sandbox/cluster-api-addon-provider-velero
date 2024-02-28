@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	helmv1 "sigs.k8s.io/cluster-api-addon-provider-helm/api/v1alpha1"
 )
@@ -28,7 +29,111 @@ import (
 type VeleroInstallationSpec struct {
 	// Proxy is a Helm chart proxy installation
 	// +optional
-	*helmv1.HelmChartProxySpec `json:",inline"`
+	helmv1.HelmChartProxySpec `json:",inline"`
+
+	State VeleroHelmState `json:"state,omitempty"`
+}
+
+type VeleroHelmState struct {
+	DeployNodeAgent bool `json:"deployNodeAgent"`
+	CleanUpCRDs     bool `json:"cleanUpCRDs"`
+
+	// Configuration is a bucket configuration
+	Configuration Configuration `json:"configuration"`
+
+	// Info about the secret to be used by the Velero deployment, which
+	// should contain credentials for the cloud provider IAM account you've
+	// set up for Velero.
+	Credentials Credentials `json:"credentials"`
+
+	Plugins []Plugin `json:"plugins,omitempty"`
+
+	InitContainers []corev1.Container `json:"initContainers,omitempty"`
+}
+
+type Configuration struct {
+	BackupStorageLocations []BackupStorageLocation `json:"backupStorageLocation"`
+}
+
+type BackupStorageLocation struct {
+	// Name of this backup storage location. If unspecified, use "default".
+	// +optional
+	Name *string `json:"name,omitempty"`
+
+	// The name for the backup storage provider.
+	Provider string `json:"provider"`
+
+	// The name or ID of the bucket to store backups in. Required.
+	Bucket string `json:"bucket"`
+
+	// Base64 encoded CA bundle used when verifying TLS connections to the provider.
+	// +optional
+	CAcert *string `json:"caCert,omitempty"`
+
+	// Directory under which all Velero data will be stored within the bucket. Optional.
+	// +optional
+	Prefix *string `json:"prefix,omitempty"`
+
+	// Flag to indicate if this is the default backup storage location (used as fallback if no other location is specified). Optional.
+	Default bool `json:"default,omitempty"`
+
+	// Frequency at which Velero should perform validation checks on this location. Optional.
+	ValidationFrequency int64 `json:"validationFrequency,omitempty"`
+
+	// Access mode for this backup storage location. Defaults to ReadWrite.
+	AccessMode AccessMode `json:"accessMode,omitempty"`
+
+	CredentialKey CredentialKey `json:"credential,omitempty"`
+
+	// Config containe additional provider-specific configuration. See link above
+	// for details of required/optional fields for your provider.
+	Config Config `json:"config,omitempty"`
+}
+
+type CredentialKey struct {
+	// Name of the secret used by this backupStorageLocation.
+	Name string `json:"name,omitempty"`
+
+	// Key that contains the secret data to be used.
+	Key string `json:"key,omitempty"`
+}
+
+type Config struct {
+	Region string `json:"region,omitempty"`
+	S3Url  string `json:"s3Url,omitempty"`
+}
+
+type AccessMode string
+
+const (
+	ReadWrite AccessMode = "ReadWrite"
+	ReadOnly  AccessMode = "ReadOnly"
+)
+
+type Plugin string
+
+const (
+	AWS Plugin = "aws"
+)
+
+type Credentials struct {
+	// Set to false if not using a secret for credentials (i.e., use KIAM or WID)
+	UseSecret bool `json:"useSecret,omitempty"`
+
+	// If set, name of pre-existing Velero secret to be used in case of 'useSecret=true' and empty 'existingSecret'.
+	Name string `json:"name,omitempty"`
+
+	// Pre-existing secret name in the Velero namespace, if any.
+	ExistingSecret *string `json:"existingSecret,omitempty"`
+
+	// Map storing secret contents (key: "<cloud>", value: entire IAM credential file).
+	Contents map[string]string `json:"contents,omitempty"`
+
+	// Environment variables from the secret to be loaded into velero/node-agent.
+	ExtraEnvVars map[string]string `json:"extraEnvVars,omitempty"`
+
+	// Reference to existing secrets with environment variable format.
+	ExtraSecretRef *string `json:"extraSecretRef,omitempty"`
 }
 
 // VeleroInstallationStatus defines the observed state of VeleroInstallation

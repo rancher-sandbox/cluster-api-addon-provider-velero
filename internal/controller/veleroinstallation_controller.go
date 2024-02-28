@@ -20,34 +20,17 @@ import (
 	"cmp"
 	"context"
 
-	"gopkg.in/yaml.v2"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/yaml"
 
 	veleroaddonv1 "addons.cluster.x-k8s.io/cluster-api-addon-provider-velero/api/v1alpha1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	helmv1 "sigs.k8s.io/cluster-api-addon-provider-helm/api/v1alpha1"
 )
-
-type VeleroHelmState struct {
-	DeployNodeAgent bool `yaml:"deployNodeAgent"`
-	CleanUpCRDs     bool `yaml:"cleanUpCRDs"`
-}
-
-var DefaultHelmState []byte
-
-func init() {
-	var parseOk error
-	DefaultHelmState, parseOk = yaml.Marshal(VeleroHelmState{
-		DeployNodeAgent: true,
-		CleanUpCRDs:     true,
-	})
-	utilruntime.Must(parseOk)
-}
 
 // VeleroInstallationReconciler reconciles a VeleroInstallation object
 type VeleroInstallationReconciler struct {
@@ -76,10 +59,34 @@ func (r *VeleroInstallationReconciler) Reconcile(ctx context.Context, req ctrl.R
 		return ctrl.Result{}, err
 	}
 
-	helmProxy := &helmv1.HelmChartProxy{}
-	if err := r.Client.Get(ctx, req.NamespacedName, helmProxy); apierrors.IsNotFound(err) {
-		return ctrl.Result{}, r.Client.Create(ctx, templateHelmChartProxy(installation))
-	} else if err != nil {
+	for _, plugin := range installation.Spec.State.Plugins {
+		switch plugin {
+		case veleroaddonv1.AWS:
+			installation.Spec.State.InitContainers = []corev1.Container{{
+				Name:            "velero-plugin-for-aws",
+				Image:           "velero/velero-plugin-for-aws:v1.9.0",
+				ImagePullPolicy: corev1.PullIfNotPresent,
+				VolumeMounts: []corev1.VolumeMount{{
+					Name:      "plugins",
+					MountPath: "/target",
+				}},
+			}}
+		}
+
+	}
+
+	spec, err := yaml.Marshal(installation.Spec.State)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	helmSpec := installation.Spec.HelmChartProxySpec
+	helmSpec.ValuesTemplate = cmp.Or(helmSpec.ValuesTemplate, string(spec))
+
+	helmProxy := templateHelmChartProxy(installation, helmSpec)
+	if err := r.Client.Patch(
+		ctx, helmProxy,
+		client.Apply, client.ForceOwnership, client.FieldOwner("velero-addon")); err != nil {
 		return ctrl.Result{}, err
 	}
 
@@ -88,18 +95,22 @@ func (r *VeleroInstallationReconciler) Reconcile(ctx context.Context, req ctrl.R
 	return ctrl.Result{}, r.Client.Status().Update(ctx, installation)
 }
 
-func templateHelmChartProxy(installation *veleroaddonv1.VeleroInstallation) *helmv1.HelmChartProxy {
+func templateHelmChartProxy(installation *veleroaddonv1.VeleroInstallation, helmSpec helmv1.HelmChartProxySpec) *helmv1.HelmChartProxy {
 	return &helmv1.HelmChartProxy{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: helmv1.GroupVersion.String(),
+			Kind:       "HelmChartProxy",
+		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      installation.Name,
 			Namespace: installation.Namespace,
 		},
-		Spec: *cmp.Or(installation.Spec.HelmChartProxySpec, &helmv1.HelmChartProxySpec{
+		Spec: helmv1.HelmChartProxySpec{
 			ClusterSelector: metav1.LabelSelector{},
-			RepoURL:         "https://vmware-tanzu.github.io/helm-charts",
-			ChartName:       "velero",
-			ValuesTemplate:  string(DefaultHelmState),
-		}),
+			RepoURL:         helmSpec.RepoURL,
+			ChartName:       helmSpec.ChartName,
+			ValuesTemplate:  helmSpec.ValuesTemplate,
+		},
 	}
 }
 
