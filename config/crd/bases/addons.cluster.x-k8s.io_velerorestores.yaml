@@ -501,7 +501,7 @@ spec:
               statuses:
                 additionalProperties:
                   description: RestoreStatus is representing status of an individual
-                    Restore resouce
+                    Restore resource
                   properties:
                     completionTimestamp:
                       description: |-
