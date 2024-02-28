@@ -11,7 +11,7 @@ require (
 	k8s.io/client-go v0.29.0
 	sigs.k8s.io/cluster-api v1.6.2
 	sigs.k8s.io/cluster-api-addon-provider-helm v0.1.1-alpha.1
-	sigs.k8s.io/cluster-api-operator v0.8.1
+	sigs.k8s.io/cluster-api-operator v0.9.0
 	sigs.k8s.io/controller-runtime v0.17.0
 	sigs.k8s.io/yaml v1.4.0
 )
