@@ -12,20 +12,16 @@ spec:
   clusterSelector: {}
   repoURL: "https://vmware-tanzu.github.io/helm-charts"
   chartName: "velero"
+  bucket: dgrigorev-velero
+  provider:
+    aws:
+      credentialMap:
+        from: bsl-credentials
+      config:
+        region: eu-central-1
+        s3Url: https://s3.amazonaws.com
   state:
-    plugins:
-    - aws
     deployNodeAgent: true
     cleanUpCRDs: true
-    configuration:
-      backupStorageLocation:
-      - provider: aws
-        bucket: dgrigorev-velero
-        config:
-          region: eu-central-1
-          s3Url: https://s3.amazonaws.com
-        credential:
-          name: bsl-credentials
-          key: aws
     credentials: {}
   # TODO(user): Add fields here

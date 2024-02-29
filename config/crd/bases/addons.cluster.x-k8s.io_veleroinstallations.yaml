@@ -40,6 +40,8 @@ spec:
           spec:
             description: VeleroInstallationSpec defines the desired state of VeleroInstallation
             properties:
+              bucket:
+                type: string
               chartName:
                 description: |-
                   ChartName is the name of the Helm chart in the repository.
@@ -240,6 +242,26 @@ spec:
                       after a Helm install/upgrade has been performed.
                     type: boolean
                 type: object
+              provider:
+                properties:
+                  aws:
+                    properties:
+                      config:
+                        properties:
+                          region:
+                            type: string
+                          s3Url:
+                            type: string
+                        type: object
+                      credentialMap:
+                        properties:
+                          from:
+                            type: string
+                          to:
+                            type: string
+                        type: object
+                    type: object
+                type: object
               releaseName:
                 description: ReleaseName is the release name of the installed Helm
                   chart. If it is not specified, a name will be generated.
@@ -272,14 +294,11 @@ spec:
                                 TLS connections to the provider.
                               type: string
                             config:
+                              additionalProperties:
+                                type: string
                               description: |-
                                 Config containe additional provider-specific configuration. See link above
                                 for details of required/optional fields for your provider.
-                              properties:
-                                region:
-                                  type: string
-                                s3Url:
-                                  type: string
                               type: object
                             credential:
                               properties:
@@ -1699,14 +1718,8 @@ spec:
                       - name
                       type: object
                     type: array
-                  plugins:
-                    items:
-                      type: string
-                    type: array
                 required:
                 - cleanUpCRDs
-                - configuration
-                - credentials
                 - deployNodeAgent
                 type: object
               valuesTemplate:
@@ -1720,6 +1733,7 @@ spec:
                   and be kept up to date with the latest version.
                 type: string
             required:
+            - bucket
             - chartName
             - clusterSelector
             - repoURL
