@@ -8,18 +8,17 @@ metadata:
     app.kubernetes.io/managed-by: kustomize
     app.kubernetes.io/created-by: cluster-api-addon-provider-velero
   name: veleroinstallation-sample
+  namespace: creategitops-me7ee7
 spec:
-  clusterSelector: {}
-  repoURL: "https://vmware-tanzu.github.io/helm-charts"
-  chartName: "velero"
   bucket: dgrigorev-velero
   provider:
     aws:
       credentialMap:
-        from: bsl-credentials
+        namespaceName:
+          name: bsl-credentials
+          namespace: default
       config:
         region: eu-central-1
-        s3Url: https://s3.amazonaws.com
   state:
     deployNodeAgent: true
     cleanUpCRDs: true

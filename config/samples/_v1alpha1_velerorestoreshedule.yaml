@@ -1,15 +1,17 @@
 apiVersion: addons.cluster.x-k8s.io/v1alpha1
-kind: VeleroBackup
+kind: VeleroRestore
 metadata:
   labels:
-    app.kubernetes.io/name: velerobackup
-    app.kubernetes.io/instance: velerobackup-sample
+    app.kubernetes.io/name: velerorestore
+    app.kubernetes.io/instance: velerorestore-sample
     app.kubernetes.io/part-of: cluster-api-addon-provider-velero
     app.kubernetes.io/managed-by: kustomize
     app.kubernetes.io/created-by: cluster-api-addon-provider-velero
-  name: velerobackup-sample
+  name: velerorestoreshedule-sample
   namespace: creategitops-me7ee7
 spec:
+  backupName: ""
+  scheduleName: veleroschedule-sample
   installation:
     ref:
       kind: VeleroInstallation

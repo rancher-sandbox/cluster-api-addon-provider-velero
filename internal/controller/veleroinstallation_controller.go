@@ -62,16 +62,24 @@ type VeleroInstallationReconciler struct {
 func (r *VeleroInstallationReconciler) Reconcile(ctx context.Context, installation *veleroaddonv1.VeleroInstallation) (ctrl.Result, error) {
 	_ = log.FromContext(ctx)
 	locations := installation.Spec.State.Configuration.BackupStorageLocations
-	index := -1
+	snapshotLocations := installation.Spec.State.Configuration.VolumeSnapshotLocations
+	index, snapshotIndex := -1, -1
 
 	provider := installation.Spec.Provider
 	switch {
 	case provider.AWS != nil:
 		location := veleroaddonv1.BackupStorageLocation{}
+		snapshotLocation := veleroaddonv1.VolumeSnapshotLocation{}
 		if index = slices.IndexFunc(locations, func(l veleroaddonv1.BackupStorageLocation) bool {
 			return l.Name == ptr.To("aws")
 		}); index > -1 {
 			location = locations[index]
+		}
+
+		if snapshotIndex = slices.IndexFunc(snapshotLocations, func(l veleroaddonv1.VolumeSnapshotLocation) bool {
+			return l.Name == ptr.To("aws")
+		}); snapshotIndex > -1 {
+			snapshotLocation = snapshotLocations[snapshotIndex]
 		}
 
 		location.Provider = "aws"
@@ -81,8 +89,17 @@ func (r *VeleroInstallationReconciler) Reconcile(ctx context.Context, installati
 			"region": provider.AWS.Config.Region,
 		}
 
-		from := provider.AWS.CredentialMap.From
+		snapshotLocation.Provider = "aws"
+		snapshotLocation.Config = map[string]string{
+			"region": provider.AWS.Config.Region,
+		}
+
+		from := cmp.Or(provider.AWS.CredentialMap.NamespaceName.Name, provider.AWS.CredentialMap.From)
 		location.CredentialKey = veleroaddonv1.CredentialKey{
+			Name: cmp.Or(provider.AWS.CredentialMap.To, from),
+			Key:  "aws",
+		}
+		snapshotLocation.CredentialKey = veleroaddonv1.CredentialKey{
 			Name: cmp.Or(provider.AWS.CredentialMap.To, from),
 			Key:  "aws",
 		}
@@ -91,6 +108,12 @@ func (r *VeleroInstallationReconciler) Reconcile(ctx context.Context, installati
 			locations[index] = location
 		} else {
 			locations = append(locations, location)
+		}
+
+		if snapshotIndex > -1 {
+			snapshotLocations[snapshotIndex] = snapshotLocation
+		} else {
+			snapshotLocations = append(snapshotLocations, snapshotLocation)
 		}
 
 		installation.Spec.State.InitContainers = []corev1.Container{{
@@ -106,7 +129,7 @@ func (r *VeleroInstallationReconciler) Reconcile(ctx context.Context, installati
 		secret := &corev1.Secret{}
 		if err := r.Client.Get(ctx, types.NamespacedName{
 			Name:      from,
-			Namespace: installation.Namespace,
+			Namespace: cmp.Or(provider.AWS.CredentialMap.NamespaceName.Namespace, installation.Namespace),
 		}, secret); err != nil {
 			return ctrl.Result{}, err
 		}
@@ -127,7 +150,7 @@ func (r *VeleroInstallationReconciler) Reconcile(ctx context.Context, installati
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      location.CredentialKey.Name,
-					Namespace: installation.Namespace,
+					Namespace: cmp.Or(installation.Spec.HelmSpec.ReleaseNamespace, installation.Spec.Namespace, "velero"),
 				},
 				Data: secret.Data,
 			}
@@ -141,16 +164,14 @@ func (r *VeleroInstallationReconciler) Reconcile(ctx context.Context, installati
 	}
 
 	installation.Spec.State.Configuration.BackupStorageLocations = locations
+	installation.Spec.State.Configuration.VolumeSnapshotLocations = snapshotLocations
 
 	spec, err := yaml.Marshal(installation.Spec.State)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 
-	helmSpec := installation.Spec.HelmChartProxySpec
-	helmSpec.ValuesTemplate = cmp.Or(helmSpec.ValuesTemplate, string(spec))
-
-	helmProxy := templateHelmChartProxy(installation, helmSpec)
+	helmProxy := templateHelmChartProxy(installation, installation.Spec.HelmSpec, spec)
 	if err := controllerutil.SetOwnerReference(installation, helmProxy, r.Client.Scheme()); err != nil {
 		return ctrl.Result{}, err
 	}
@@ -166,7 +187,18 @@ func (r *VeleroInstallationReconciler) Reconcile(ctx context.Context, installati
 	return ctrl.Result{}, r.Client.Status().Update(ctx, installation)
 }
 
-func templateHelmChartProxy(installation *veleroaddonv1.VeleroInstallation, helmSpec helmv1.HelmChartProxySpec) *helmv1.HelmChartProxy {
+func templateHelmChartProxy(installation *veleroaddonv1.VeleroInstallation, helmSpec helmv1.HelmChartProxySpec, values []byte) *helmv1.HelmChartProxy {
+	clusterSelector := helmSpec.ClusterSelector
+	if installation.Spec.ClusterSelector.MatchExpressions != nil || installation.Spec.ClusterSelector.MatchLabels != nil {
+		clusterSelector = installation.Spec.ClusterSelector
+	}
+
+	options := cmp.Or(helmSpec.Options, helmv1.HelmOptions{
+		Install: helmv1.HelmInstallOptions{
+			CreateNamespace: true,
+		},
+	})
+
 	return &helmv1.HelmChartProxy{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: helmv1.GroupVersion.String(),
@@ -177,10 +209,12 @@ func templateHelmChartProxy(installation *veleroaddonv1.VeleroInstallation, helm
 			Namespace: installation.Namespace,
 		},
 		Spec: helmv1.HelmChartProxySpec{
-			ClusterSelector: metav1.LabelSelector{},
-			RepoURL:         helmSpec.RepoURL,
-			ChartName:       helmSpec.ChartName,
-			ValuesTemplate:  helmSpec.ValuesTemplate,
+			ClusterSelector:  clusterSelector,
+			ReleaseNamespace: cmp.Or(installation.Spec.Namespace, "velero"),
+			RepoURL:          cmp.Or(helmSpec.RepoURL, "https://vmware-tanzu.github.io/helm-charts"),
+			ChartName:        cmp.Or(helmSpec.ChartName, "velero"),
+			ValuesTemplate:   cmp.Or(helmSpec.ValuesTemplate, string(values)),
+			Options:          options,
 		},
 	}
 }
