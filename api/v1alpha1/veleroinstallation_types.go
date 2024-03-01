@@ -32,6 +32,29 @@ type VeleroInstallationSpec struct {
 	helmv1.HelmChartProxySpec `json:",inline"`
 
 	State VeleroHelmState `json:"state,omitempty"`
+
+	Bucket string `json:"bucket"`
+
+	Provider Provider `json:"provider,omitempty"`
+}
+
+type Provider struct {
+	AWS *AWS `json:"aws,omitempty"`
+}
+
+type AWS struct {
+	CredentialMap CredentialMap `json:"credentialMap,omitempty"`
+
+	// +optional
+	Config AWSConfig `json:"config,omitempty"`
+}
+
+type AWSConfig struct {
+	// +optional
+	Region string `json:"region,omitempty"`
+
+	// +optional
+	S3Url string `json:"s3Url,omitempty"`
 }
 
 type VeleroHelmState struct {
@@ -39,15 +62,16 @@ type VeleroHelmState struct {
 	CleanUpCRDs     bool `json:"cleanUpCRDs"`
 
 	// Configuration is a bucket configuration
-	Configuration Configuration `json:"configuration"`
+	// +optional
+	Configuration Configuration `json:"configuration,omitempty"`
 
 	// Info about the secret to be used by the Velero deployment, which
 	// should contain credentials for the cloud provider IAM account you've
 	// set up for Velero.
-	Credentials Credentials `json:"credentials"`
+	// +optional
+	Credentials Credentials `json:"credentials,omitempty"`
 
-	Plugins []Plugin `json:"plugins,omitempty"`
-
+	//+optional
 	InitContainers []corev1.Container `json:"initContainers,omitempty"`
 }
 
@@ -87,7 +111,7 @@ type BackupStorageLocation struct {
 
 	// Config containe additional provider-specific configuration. See link above
 	// for details of required/optional fields for your provider.
-	Config Config `json:"config,omitempty"`
+	Config map[string]string `json:"config,omitempty"`
 }
 
 type CredentialKey struct {
@@ -95,12 +119,15 @@ type CredentialKey struct {
 	Name string `json:"name,omitempty"`
 
 	// Key that contains the secret data to be used.
+	// +optional
 	Key string `json:"key,omitempty"`
 }
 
-type Config struct {
-	Region string `json:"region,omitempty"`
-	S3Url  string `json:"s3Url,omitempty"`
+type CredentialMap struct {
+	From string `json:"from,omitempty"`
+
+	// +optional
+	To string `json:"to,omitempty"`
 }
 
 type AccessMode string
@@ -108,12 +135,6 @@ type AccessMode string
 const (
 	ReadWrite AccessMode = "ReadWrite"
 	ReadOnly  AccessMode = "ReadOnly"
-)
-
-type Plugin string
-
-const (
-	AWS Plugin = "aws"
 )
 
 type Credentials struct {

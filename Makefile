@@ -66,7 +66,7 @@ OBSERVABILITY_DIR := hack/observability
 export PATH := $(abspath $(TOOLS_BIN_DIR)):$(PATH)
 
 # Set --output-base for conversion-gen if we are not within GOPATH
-ifneq ($(abspath $(ROOT_DIR)),$(shell go env GOPATH)/src/sigs.k8s.io/cluster-api-addon-provider-helm)
+ifneq ($(abspath $(ROOT_DIR)),$(shell go env GOPATH)/src/sigs.k8s.io/cluster-api-addon-provider-velero)
 	CONVERSION_GEN_OUTPUT_BASE := --output-base=$(ROOT_DIR)
 else
 	export GOPATH := $(shell go env GOPATH)
@@ -187,14 +187,15 @@ GOLANGCI_LINT_BIN := golangci-lint
 GOLANGCI_LINT := $(abspath $(TOOLS_BIN_DIR)/$(GOLANGCI_LINT_BIN))
 
 # Define Docker related variables. Releases should modify and double check these vars.
-REGISTRY ?= gcr.io/$(shell gcloud config get-value project)
+# REGISTRY ?= gcr.io/$(shell gcloud config get-value project)
+REGISTRY ?= ghcr.io/danil-grigorev
 PROD_REGISTRY ?= registry.k8s.io/cluster-api-helm
 
-STAGING_REGISTRY ?= gcr.io/k8s-staging-cluster-api-helm
-STAGING_BUCKET ?= artifacts.k8s-staging-cluster-api-helm.appspot.com
+STAGING_REGISTRY ?= gcr.io/k8s-staging-cluster-api-velero
+STAGING_BUCKET ?= artifacts.k8s-staging-cluster-api-velero.appspot.com
 
 # core
-IMAGE_NAME ?= cluster-api-helm-controller
+IMAGE_NAME ?= cluster-api-velero-controller
 CONTROLLER_IMG ?= $(REGISTRY)/$(IMAGE_NAME)
 
 # kind
@@ -358,6 +359,10 @@ verify-container-images: ## Verify container images
 
 ##@ build:
 
+.PHONY: run
+run: generate ## Run a controller from your host.
+	go run ./cmd/main.go
+
 .PHONY: manager
 manager: ## Build the manager binary into the ./bin folder
 	go build -trimpath -ldflags "$(LDFLAGS)" -o $(BIN_DIR)/manager .
@@ -489,11 +494,11 @@ PREVIOUS_TAG ?= $(shell git tag -l | grep -E "^v[0-9]+\.[0-9]+\.[0-9]+$$" | sort
 RELEASE_ALIAS_TAG := $(PULL_BASE_REF)
 RELEASE_DIR := out
 RELEASE_NOTES_DIR := _releasenotes
-GIT_REPO_NAME ?= cluster-api-addon-provider-helm
+GIT_REPO_NAME ?= cluster-api-addon-provider-velero
 GIT_ORG_NAME ?= kubernetes-sigs
-USER_FORK ?= $(shell git config --get remote.origin.url | cut -d/ -f4) # only works on https://github.com/<username>/cluster-api-addon-provider-helm.git style URLs
+USER_FORK ?= $(shell git config --get remote.origin.url | cut -d/ -f4) # only works on https://github.com/<username>/cluster-api-addon-provider-velero.git style URLs
 ifdef USER_FORK
-USER_FORK := $(shell git config --get remote.origin.url | cut -d: -f2 | cut -d/ -f1) # for git@github.com:<username>/cluster-api-addon-provider-helm.git style URLs
+USER_FORK := $(shell git config --get remote.origin.url | cut -d: -f2 | cut -d/ -f1) # for git@github.com:<username>/cluster-api-addon-provider-velero.git style URLs
 endif
 IMAGE_REVIEWERS ?= $(shell ./hack/get-project-maintainers.sh)
 
@@ -557,7 +562,7 @@ release-staging: ## Build and push container images to the staging bucket
 	REGISTRY=$(STAGING_REGISTRY) $(MAKE) docker-build-all docker-push-all release-alias-tag
 
 .PHONY: release-staging-nightly
-release-staging-nightly: ## Tag and push container images to the staging bucket. Example image tag: cluster-api-helm-controller:nightly_main_20210121
+release-staging-nightly: ## Tag and push container images to the staging bucket. Example image tag: cluster-api-velero-controller:nightly_main_20210121
 	$(eval NEW_RELEASE_ALIAS_TAG := nightly_$(RELEASE_ALIAS_TAG)_$(shell date +'%Y%m%d'))
 	echo $(NEW_RELEASE_ALIAS_TAG)
 	$(MAKE) release-alias-tag TAG=$(RELEASE_ALIAS_TAG) RELEASE_ALIAS_TAG=$(NEW_RELEASE_ALIAS_TAG)
@@ -565,7 +570,7 @@ release-staging-nightly: ## Tag and push container images to the staging bucket.
 	$(MAKE) manifest-modification REGISTRY=$(STAGING_REGISTRY) RELEASE_TAG=$(NEW_RELEASE_ALIAS_TAG)
 	## Build the manifests
 	$(MAKE) release-manifests
-	# Example manifest location: artifacts.k8s-staging-cluster-api-helm.appspot.com/components/nightly_main_20210121/bootstrap-components.yaml
+	# Example manifest location: artifacts.k8s-staging-cluster-api-velero.appspot.com/components/nightly_main_20210121/bootstrap-components.yaml
 	gsutil cp $(RELEASE_DIR)/* gs://$(STAGING_BUCKET)/components/$(NEW_RELEASE_ALIAS_TAG)
 
 .PHONY: release-alias-tag
@@ -575,7 +580,7 @@ release-alias-tag: ## Add the release alias tag to the last build tag
 .PHONY: release-notes
 release-notes: $(RELEASE_NOTES_DIR) $(RELEASE_NOTES)
 	@if [ -n "${PRE_RELEASE}" ]; then \
-	echo ":rotating_light: This is a RELEASE CANDIDATE. Use it only for testing purposes. If you find any bugs, file an [issue](https://github.com/kubernetes-sigs/cluster-api-addon-provider-helm/issues/new)." > $(RELEASE_NOTES_DIR)/release-notes-$(RELEASE_TAG).md; \
+	echo ":rotating_light: This is a RELEASE CANDIDATE. Use it only for testing purposes. If you find any bugs, file an [issue](https://github.com/kubernetes-sigs/cluster-api-addon-provider-velero/issues/new)." > $(RELEASE_NOTES_DIR)/release-notes-$(RELEASE_TAG).md; \
 	else \
 	$(RELEASE_NOTES) --org $(GIT_ORG_NAME) --repo $(GIT_REPO_NAME) --branch $(RELEASE_BRANCH)  --start-rev $(PREVIOUS_TAG) --end-rev $(RELEASE_TAG) --output $(RELEASE_NOTES_DIR)/tmp-release-notes.md --list-v2; \
 	sed 's/\[SIG Cluster Lifecycle\]//g' $(RELEASE_NOTES_DIR)/tmp-release-notes.md > $(RELEASE_NOTES_DIR)/release-notes-$(RELEASE_TAG).md; \
@@ -584,7 +589,7 @@ release-notes: $(RELEASE_NOTES_DIR) $(RELEASE_NOTES)
 
 .PHONY: promote-images
 promote-images: $(KPROMO)
-	$(KPROMO) pr --project cluster-api-helm --tag $(RELEASE_TAG) --reviewers "$(IMAGE_REVIEWERS)" --fork $(USER_FORK) --image cluster-api-helm-controller
+	$(KPROMO) pr --project cluster-api-helm --tag $(RELEASE_TAG) --reviewers "$(IMAGE_REVIEWERS)" --fork $(USER_FORK) --image cluster-api-velero-controller
 
 ## --------------------------------------
 ## Docker
@@ -735,7 +740,7 @@ $(CONVERSION_GEN): # Build conversion-gen from tools folder.
 	GOBIN=$(TOOLS_BIN_DIR) $(GO_INSTALL) $(CONVERSION_GEN_PKG) $(CONVERSION_GEN_BIN) $(CONVERSION_GEN_VER)
 
 $(CONVERSION_VERIFIER): $(TOOLS_DIR)/go.mod # Build conversion-verifier from tools folder.
-	cd $(TOOLS_DIR); go build -tags=tools -o $(BIN_DIR)/$(CONVERSION_VERIFIER_BIN) sigs.k8s.io/cluster-api-addon-provider-helm/hack/tools/conversion-verifier
+	cd $(TOOLS_DIR); go build -tags=tools -o $(BIN_DIR)/$(CONVERSION_VERIFIER_BIN) sigs.k8s.io/cluster-api-addon-provider-velero/hack/tools/conversion-verifier
 
 .PHONY: $(OPENAPI_GEN)
 $(OPENAPI_GEN): # Build openapi-gen from tools folder.
@@ -744,7 +749,7 @@ $(OPENAPI_GEN): # Build openapi-gen from tools folder.
 ## We are forcing a rebuilt of runtime-openapi-gen via PHONY so that we're always using an up-to-date version.
 .PHONY: $(RUNTIME_OPENAPI_GEN)
 $(RUNTIME_OPENAPI_GEN): $(TOOLS_DIR)/go.mod # Build openapi-gen from tools folder.
-	cd $(TOOLS_DIR); go build -tags=tools -o $(BIN_DIR)/$(RUNTIME_OPENAPI_GEN_BIN) sigs.k8s.io/cluster-api-addon-provider-helm/hack/tools/runtime-openapi-gen
+	cd $(TOOLS_DIR); go build -tags=tools -o $(BIN_DIR)/$(RUNTIME_OPENAPI_GEN_BIN) sigs.k8s.io/cluster-api-addon-provider-velero/hack/tools/runtime-openapi-gen
 
 $(GOTESTSUM): # Build gotestsum from tools folder.
 	GOBIN=$(TOOLS_BIN_DIR) $(GO_INSTALL) $(GOTESTSUM_PKG) $(GOTESTSUM_BIN) $(GOTESTSUM_VER)
@@ -765,7 +770,7 @@ $(SETUP_ENVTEST): # Build setup-envtest from tools folder.
 	GOBIN=$(TOOLS_BIN_DIR) $(GO_INSTALL) $(SETUP_ENVTEST_PKG) $(SETUP_ENVTEST_BIN) $(SETUP_ENVTEST_VER)
 
 $(TILT_PREPARE): $(TOOLS_DIR)/go.mod # Build tilt-prepare from tools folder.
-	cd $(TOOLS_DIR); go build -tags=tools -o $(BIN_DIR)/tilt-prepare sigs.k8s.io/cluster-api-addon-provider-helm/hack/tools/tilt-prepare
+	cd $(TOOLS_DIR); go build -tags=tools -o $(BIN_DIR)/tilt-prepare sigs.k8s.io/cluster-api-addon-provider-velero/hack/tools/tilt-prepare
 
 $(KPROMO):
 	GOBIN=$(TOOLS_BIN_DIR) $(GO_INSTALL) $(KPROMO_PKG) $(KPROMO_BIN) ${KPROMO_VER}

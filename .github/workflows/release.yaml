@@ -8,11 +8,14 @@ on:
 
 permissions:
   contents: write # Allow to create a release.
+  packages: write
 
 jobs:
   build:
     name: create draft release
     runs-on: ubuntu-latest
+    env:
+      REGISTRY: ghcr.io/${{ github.actor }}
     steps:
       - name: Set env
         run:  echo "RELEASE_TAG=${GITHUB_REF:10}" >> $GITHUB_ENV
@@ -24,6 +27,20 @@ jobs:
         uses: actions/setup-go@6edd4406fa81c3da01a34fa6f6343087c207a568 # tag=v3.5.0
         with:
           go-version: '^1.22'
+      - name: Docker login
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Convert actor name to lowercase and store in the env
+        run: |
+          echo "OWNER=$(echo $GITHUB_ACTOR | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+          echo "REGISTRY=$(echo $REGISTRY | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+      - name: Build docker image
+        run: make docker-build
+      - name: Push docker image
+        run: make docker-push
       - name: generate release artifacts
         run: |
           make release

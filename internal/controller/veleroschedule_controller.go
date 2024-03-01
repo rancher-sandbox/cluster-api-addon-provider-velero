@@ -62,7 +62,6 @@ func (r *VeleroScheduleReconciler) SetupWithManager(ctx context.Context, mgr ctr
 func (r *VeleroScheduleReconciler) ReconcileProxy(ctx context.Context, installation *veleroaddonv1.VeleroInstallation, schedule *veleroaddonv1.VeleroSchedule) (ctrl.Result, error) {
 	_ = log.FromContext(ctx)
 
-	r.Installation = installation
 	r.Schedule = &velerov1.Schedule{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      schedule.Name,
@@ -82,10 +81,10 @@ func (r *VeleroScheduleReconciler) GetObject() client.Object {
 	return &veleroaddonv1.VeleroSchedule{}
 }
 
-func (r *VeleroScheduleReconciler) UpdateRemote(ctx context.Context, schedule *veleroaddonv1.VeleroSchedule) (ctrl.Result, error) {
-	return r.Reconciler.UpdateRemote(ctx, r.Installation, schedule, r.Schedule)
+func (r *VeleroScheduleReconciler) UpdateRemote(ctx context.Context, installation *veleroaddonv1.VeleroInstallation, schedule *veleroaddonv1.VeleroSchedule) (ctrl.Result, error) {
+	return r.Reconciler.UpdateRemote(ctx, installation, schedule, r.Schedule)
 }
 
-func (r *VeleroScheduleReconciler) CleanupRemote(ctx context.Context, schedule *veleroaddonv1.VeleroSchedule) (ctrl.Result, error) {
-	return r.Reconciler.CleanupRemote(ctx, r.Installation, schedule, r.Schedule)
+func (r *VeleroScheduleReconciler) CleanupRemote(ctx context.Context, installation *veleroaddonv1.VeleroInstallation, schedule *veleroaddonv1.VeleroSchedule) (ctrl.Result, error) {
+	return r.Reconciler.CleanupRemote(ctx, installation, schedule, r.Schedule)
 }

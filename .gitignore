@@ -40,3 +40,6 @@ tmp/
 
 # Secret files
 credentials-velero
+
+# Release generated
+out
