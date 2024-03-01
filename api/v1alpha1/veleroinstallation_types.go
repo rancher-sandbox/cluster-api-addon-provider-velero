@@ -27,9 +27,17 @@ import (
 
 // VeleroInstallationSpec defines the desired state of VeleroInstallation
 type VeleroInstallationSpec struct {
-	// Proxy is a Helm chart proxy installation
+	// HelmSpec is a Helm chart proxy installation spec
 	// +optional
-	helmv1.HelmChartProxySpec `json:",inline"`
+	HelmSpec helmv1.HelmChartProxySpec `json:"helmSpec,omitempty"`
+
+	// ClusterSelector selects Clusters in the same namespace with a label that matches the specified label selector. The Helm
+	// chart will be installed on all selected Clusters. If a Cluster is no longer selected, the Helm release will be uninstalled.
+	// +optional
+	ClusterSelector metav1.LabelSelector `json:"clusterSelector,omitempty"`
+
+	// +optional
+	Namespace string `json:"namespace,omitempty"`
 
 	State VeleroHelmState `json:"state,omitempty"`
 
@@ -76,7 +84,23 @@ type VeleroHelmState struct {
 }
 
 type Configuration struct {
-	BackupStorageLocations []BackupStorageLocation `json:"backupStorageLocation"`
+	BackupStorageLocations  []BackupStorageLocation  `json:"backupStorageLocation"`
+	VolumeSnapshotLocations []VolumeSnapshotLocation `json:"volumeSnapshotLocation"`
+}
+
+type VolumeSnapshotLocation struct {
+	// Name of this backup storage location. If unspecified, use "default".
+	// +optional
+	Name *string `json:"name,omitempty"`
+
+	// The name for the backup storage provider.
+	Provider string `json:"provider"`
+
+	CredentialKey CredentialKey `json:"credential,omitempty"`
+
+	// Config containe additional provider-specific configuration. See link above
+	// for details of required/optional fields for your provider.
+	Config map[string]string `json:"config,omitempty"`
 }
 
 type BackupStorageLocation struct {
@@ -124,10 +148,19 @@ type CredentialKey struct {
 }
 
 type CredentialMap struct {
+	// +optional
 	From string `json:"from,omitempty"`
 
 	// +optional
+	NamespaceName CredentialNamespaceName `json:"namespaceName,omitempty"`
+
+	// +optional
 	To string `json:"to,omitempty"`
+}
+
+type CredentialNamespaceName struct {
+	Name      string `json:"name"`
+	Namespace string `json:"namespace"`
 }
 
 type AccessMode string

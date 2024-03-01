@@ -61,3 +61,7 @@ cat > credentials-velero <<EOF
 aws_access_key_id=$key
 aws_secret_access_key=$secret
 EOF
+
+kubectl create secret generic -n default bsl-credentials --from-file=aws=credentials-velero
+
+rm credentials-velero

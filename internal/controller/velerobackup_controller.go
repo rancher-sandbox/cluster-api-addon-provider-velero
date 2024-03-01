@@ -17,6 +17,7 @@ limitations under the License.
 package controller
 
 import (
+	"cmp"
 	"context"
 
 	veleroaddonv1 "addons.cluster.x-k8s.io/cluster-api-addon-provider-velero/api/v1alpha1"
@@ -24,6 +25,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -57,13 +59,13 @@ func (r *VeleroBackupReconciler) SetupWithManager(ctx context.Context, mgr ctrl.
 //
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.17.0/pkg/reconcile
-func (r *VeleroBackupReconciler) ReconcileProxy(ctx context.Context, installation *veleroaddonv1.VeleroInstallation, backup *veleroaddonv1.VeleroBackup) (ctrl.Result, error) {
+func (r *VeleroBackupReconciler) Reconcile(ctx context.Context, clusterRef client.ObjectKey, installation *veleroaddonv1.VeleroInstallation, backup *veleroaddonv1.VeleroBackup) (ctrl.Result, error) {
 	_ = log.FromContext(ctx)
 
 	r.Backup = &velerov1.Backup{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      backup.Name,
-			Namespace: "default",
+			Name:      backup.Name + "-" + clusterRef.Name,
+			Namespace: cmp.Or(installation.Spec.HelmSpec.ReleaseNamespace, installation.Spec.Namespace, "velero"),
 			Annotations: map[string]string{
 				proxyKeyAnnotation: string(veleroaddonv1.ToNamespaceName(backup)),
 			},
@@ -74,10 +76,10 @@ func (r *VeleroBackupReconciler) ReconcileProxy(ctx context.Context, installatio
 	return ctrl.Result{}, nil
 }
 
-func (r *VeleroBackupReconciler) UpdateRemote(ctx context.Context, installation *veleroaddonv1.VeleroInstallation, backup *veleroaddonv1.VeleroBackup) (ctrl.Result, error) {
-	return r.Reconciler.UpdateRemote(ctx, installation, backup, r.Backup)
+func (r *VeleroBackupReconciler) UpdateRemote(ctx context.Context, clusterRef client.ObjectKey, installation *veleroaddonv1.VeleroInstallation, backup *veleroaddonv1.VeleroBackup) (ctrl.Result, error) {
+	return r.Reconciler.UpdateRemote(ctx, clusterRef, installation, backup, r.Backup)
 }
 
-func (r *VeleroBackupReconciler) CleanupRemote(ctx context.Context, installation *veleroaddonv1.VeleroInstallation, backup *veleroaddonv1.VeleroBackup) (ctrl.Result, error) {
-	return r.Reconciler.CleanupRemote(ctx, installation, backup, r.Backup)
+func (r *VeleroBackupReconciler) CleanupRemote(ctx context.Context, clusterRef client.ObjectKey, installation *veleroaddonv1.VeleroInstallation, backup *veleroaddonv1.VeleroBackup) (ctrl.Result, error) {
+	return r.Reconciler.CleanupRemote(ctx, clusterRef, installation, backup, r.Backup)
 }

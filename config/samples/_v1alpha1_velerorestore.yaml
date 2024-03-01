@@ -8,10 +8,11 @@ metadata:
     app.kubernetes.io/managed-by: kustomize
     app.kubernetes.io/created-by: cluster-api-addon-provider-velero
   name: velerorestore-sample
+  namespace: creategitops-me7ee7
 spec:
   backupName: velerobackup-sample
   installation:
     ref:
       kind: VeleroInstallation
       name: veleroinstallation-sample
-      namespace: default
+      namespace: creategitops-me7ee7

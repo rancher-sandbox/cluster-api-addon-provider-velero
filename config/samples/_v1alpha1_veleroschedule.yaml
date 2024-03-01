@@ -8,5 +8,12 @@ metadata:
     app.kubernetes.io/managed-by: kustomize
     app.kubernetes.io/created-by: cluster-api-addon-provider-velero
   name: veleroschedule-sample
+  namespace: creategitops-me7ee7
 spec:
-  # TODO(user): Add fields here
+  template: {}
+  schedule: "* * * * *"
+  installation:
+    ref:
+      kind: VeleroInstallation
+      name: veleroinstallation-sample
+      namespace: creategitops-me7ee7
