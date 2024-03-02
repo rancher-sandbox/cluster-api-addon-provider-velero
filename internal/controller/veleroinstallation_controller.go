@@ -64,61 +64,43 @@ func (r *VeleroInstallationReconciler) Reconcile(ctx context.Context, installati
 	locations := installation.Spec.State.Configuration.BackupStorageLocations
 	snapshotLocations := installation.Spec.State.Configuration.VolumeSnapshotLocations
 	index, snapshotIndex := -1, -1
+	from, fromNamespace := "", ""
 
 	provider := installation.Spec.Provider
+	location := veleroaddonv1.BackupStorageLocation{
+		Provider: provider.Name(),
+	}
+	snapshotLocation := veleroaddonv1.VolumeSnapshotLocation{
+		Provider: provider.Name(),
+	}
+	if index = slices.IndexFunc(locations, func(l veleroaddonv1.BackupStorageLocation) bool {
+		return l.Name == ptr.To(provider.Name())
+	}); index > -1 {
+		location = locations[index]
+	}
+
+	if snapshotIndex = slices.IndexFunc(snapshotLocations, func(l veleroaddonv1.VolumeSnapshotLocation) bool {
+		return l.Name == ptr.To(provider.Name())
+	}); snapshotIndex > -1 {
+		snapshotLocation = snapshotLocations[snapshotIndex]
+	}
 	switch {
 	case provider.AWS != nil:
-		location := veleroaddonv1.BackupStorageLocation{}
-		snapshotLocation := veleroaddonv1.VolumeSnapshotLocation{}
-		if index = slices.IndexFunc(locations, func(l veleroaddonv1.BackupStorageLocation) bool {
-			return l.Name == ptr.To("aws")
-		}); index > -1 {
-			location = locations[index]
-		}
-
-		if snapshotIndex = slices.IndexFunc(snapshotLocations, func(l veleroaddonv1.VolumeSnapshotLocation) bool {
-			return l.Name == ptr.To("aws")
-		}); snapshotIndex > -1 {
-			snapshotLocation = snapshotLocations[snapshotIndex]
-		}
-
-		location.Provider = "aws"
 		location.Bucket = installation.Spec.Bucket
 		location.Config = map[string]string{
 			"s3Url":  provider.AWS.Config.S3Url,
 			"region": provider.AWS.Config.Region,
 		}
 
-		snapshotLocation.Provider = "aws"
 		snapshotLocation.Config = map[string]string{
 			"region": provider.AWS.Config.Region,
 		}
 
-		from := cmp.Or(provider.AWS.CredentialMap.NamespaceName.Name, provider.AWS.CredentialMap.From)
-		location.CredentialKey = veleroaddonv1.CredentialKey{
-			Name: cmp.Or(provider.AWS.CredentialMap.To, from),
-			Key:  "aws",
-		}
-		snapshotLocation.CredentialKey = veleroaddonv1.CredentialKey{
-			Name: cmp.Or(provider.AWS.CredentialMap.To, from),
-			Key:  "aws",
-		}
-
-		if index > -1 {
-			locations[index] = location
-		} else {
-			locations = append(locations, location)
-		}
-
-		if snapshotIndex > -1 {
-			snapshotLocations[snapshotIndex] = snapshotLocation
-		} else {
-			snapshotLocations = append(snapshotLocations, snapshotLocation)
-		}
-
+		image := cmp.Or(installation.Spec.Provider.AWS.PluginURL, "velero/velero-plugin-for-aws")
+		tag := cmp.Or(installation.Spec.Provider.AWS.PluginTag, "latest")
 		installation.Spec.State.InitContainers = []corev1.Container{{
 			Name:            "velero-plugin-for-aws",
-			Image:           "velero/velero-plugin-for-aws:v1.9.0",
+			Image:           image + ":" + tag,
 			ImagePullPolicy: corev1.PullIfNotPresent,
 			VolumeMounts: []corev1.VolumeMount{{
 				Name:      "plugins",
@@ -126,45 +108,103 @@ func (r *VeleroInstallationReconciler) Reconcile(ctx context.Context, installati
 			}},
 		}}
 
-		secret := &corev1.Secret{}
-		if err := r.Client.Get(ctx, types.NamespacedName{
-			Name:      from,
-			Namespace: cmp.Or(provider.AWS.CredentialMap.NamespaceName.Namespace, installation.Namespace),
-		}, secret); err != nil {
-			return ctrl.Result{}, err
+		from = cmp.Or(provider.AWS.CredentialMap.NamespaceName.Name, provider.AWS.CredentialMap.From)
+		fromNamespace = cmp.Or(provider.AWS.CredentialMap.NamespaceName.Namespace, installation.Namespace)
+		location.CredentialKey = veleroaddonv1.CredentialKey{
+			Name: cmp.Or(provider.AWS.CredentialMap.To, from),
+			Key:  provider.Name(),
+		}
+		snapshotLocation.CredentialKey = veleroaddonv1.CredentialKey{
+			Name: cmp.Or(provider.AWS.CredentialMap.To, from),
+			Key:  provider.Name(),
 		}
 
-		var errs []error
-		for _, cluster := range installation.Status.MatchingClusters {
-			cl, err := r.Tracker.GetClient(ctx, veleroaddonv1.RefToNamespaceName(&cluster).ObjectKey())
-			if err != nil {
-				errs = append(errs, client.IgnoreNotFound(err))
-
-				continue
-			}
-
-			newSecret := &corev1.Secret{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: "v1",
-					Kind:       "Secret",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      location.CredentialKey.Name,
-					Namespace: cmp.Or(installation.Spec.HelmSpec.ReleaseNamespace, installation.Spec.Namespace, "velero"),
-				},
-				Data: secret.Data,
-			}
-
-			errs = append(errs, cl.Patch(ctx, newSecret, client.Apply, client.ForceOwnership, client.FieldOwner("velero-addon")))
+	case provider.Azure != nil:
+		location.Bucket = installation.Spec.Bucket
+		location.Config = map[string]string{
+			"resourceGroup":           provider.Azure.Config.ResourceGroup,
+			"storageAccount":          provider.Azure.Config.StorageAccount,
+			"storageAccountKeyEnvVar": cmp.Or(provider.Azure.Config.StorageAccountKeyEnvVar, "AZURE_STORAGE_ACCOUNT_ACCESS_KEY"),
 		}
 
-		if err := kerrors.NewAggregate(errs); err != nil {
-			return ctrl.Result{}, err
+		snapshotLocation.Config = map[string]string{}
+
+		image := cmp.Or(installation.Spec.Provider.Azure.PluginURL, "velero/velero-plugin-for-microsoft-azure")
+		tag := cmp.Or(installation.Spec.Provider.Azure.PluginTag, "latest")
+		installation.Spec.State.InitContainers = []corev1.Container{{
+			Name:            "velero-plugin-for-microsoft-azure",
+			Image:           image + ":" + tag,
+			ImagePullPolicy: corev1.PullIfNotPresent,
+			VolumeMounts: []corev1.VolumeMount{{
+				Name:      "plugins",
+				MountPath: "/target",
+			}},
+		}}
+
+		from = cmp.Or(provider.Azure.CredentialMap.NamespaceName.Name, provider.Azure.CredentialMap.From)
+		fromNamespace = cmp.Or(provider.Azure.CredentialMap.NamespaceName.Namespace, installation.Namespace)
+		location.CredentialKey = veleroaddonv1.CredentialKey{
+			Name: cmp.Or(provider.Azure.CredentialMap.To, from),
+			Key:  provider.Name(),
 		}
+		snapshotLocation.CredentialKey = veleroaddonv1.CredentialKey{
+			Name: cmp.Or(provider.Azure.CredentialMap.To, from),
+			Key:  provider.Name(),
+		}
+	}
+
+	// Plugins / values
+	if index > -1 {
+		locations[index] = location
+	} else {
+		locations = append(locations, location)
+	}
+
+	if snapshotIndex > -1 {
+		snapshotLocations[snapshotIndex] = snapshotLocation
+	} else {
+		snapshotLocations = append(snapshotLocations, snapshotLocation)
 	}
 
 	installation.Spec.State.Configuration.BackupStorageLocations = locations
 	installation.Spec.State.Configuration.VolumeSnapshotLocations = snapshotLocations
+
+	// Secret sync
+	secret := &corev1.Secret{}
+	if err := r.Client.Get(ctx, types.NamespacedName{
+		Name:      from,
+		Namespace: fromNamespace,
+	}, secret); err != nil {
+		return ctrl.Result{}, err
+	}
+
+	var errs []error
+	for _, cluster := range installation.Status.MatchingClusters {
+		cl, err := r.Tracker.GetClient(ctx, veleroaddonv1.RefToNamespaceName(&cluster).ObjectKey())
+		if err != nil {
+			errs = append(errs, client.IgnoreNotFound(err))
+
+			continue
+		}
+
+		newSecret := &corev1.Secret{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "v1",
+				Kind:       "Secret",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      location.CredentialKey.Name,
+				Namespace: cmp.Or(installation.Spec.HelmSpec.ReleaseNamespace, installation.Spec.Namespace, "velero"),
+			},
+			Data: secret.Data,
+		}
+
+		errs = append(errs, cl.Patch(ctx, newSecret, client.Apply, client.ForceOwnership, client.FieldOwner("velero-addon")))
+	}
+
+	if err := kerrors.NewAggregate(errs); err != nil {
+		return ctrl.Result{}, err
+	}
 
 	spec, err := yaml.Marshal(installation.Spec.State)
 	if err != nil {

@@ -1,0 +1,18 @@
+apiVersion: addons.cluster.x-k8s.io/v1alpha1
+kind: VeleroRestore
+metadata:
+  labels:
+    app.kubernetes.io/name: velerorestore
+    app.kubernetes.io/instance: azrestore-sample
+    app.kubernetes.io/part-of: cluster-api-addon-provider-velero
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: cluster-api-addon-provider-velero
+  name: azrestore-sample
+  namespace: creategitops-me7ee7
+spec:
+  backupName: azbackup-sample
+  installation:
+    ref:
+      kind: VeleroInstallation
+      name: sample-az
+      namespace: creategitops-me7ee7
