@@ -3,24 +3,26 @@ kind: VeleroInstallation
 metadata:
   labels:
     app.kubernetes.io/name: veleroinstallation
-    app.kubernetes.io/instance: veleroinstallation-sample
+    app.kubernetes.io/instance: sample-az
     app.kubernetes.io/part-of: cluster-api-addon-provider-velero
     app.kubernetes.io/managed-by: kustomize
     app.kubernetes.io/created-by: cluster-api-addon-provider-velero
-  name: veleroinstallation-sample
+  name: sample-az
   namespace: creategitops-me7ee7
 spec:
-  bucket: dgrigorev-velero
+  bucket: velero-dgrigore
+  namespace: velero-az
   provider:
-    aws:
+    azure:
       credentialMap:
         namespaceName:
-          name: bsl-credentials
+          name: az-credentials
           namespace: default
       config:
-        region: eu-central-1
+        resourceGroup: dgrigore_backups
+        storageAccount: velerodgrigorev
   state:
     deployNodeAgent: true
     cleanUpCRDs: true
     credentials: {}
-  # TODO(user): Add fields here
+

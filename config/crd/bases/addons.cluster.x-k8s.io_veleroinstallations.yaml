@@ -347,6 +347,52 @@ spec:
                           to:
                             type: string
                         type: object
+                      pluginTag:
+                        type: string
+                      pluginURL:
+                        type: string
+                    type: object
+                  azure:
+                    properties:
+                      config:
+                        properties:
+                          resourceGroup:
+                            description: AZURE_BACKUP_RESOURCE_GROUP
+                            type: string
+                          storageAccount:
+                            description: AZURE_STORAGE_ACCOUNT_ID
+                            type: string
+                          storageAccountKeyEnvVar:
+                            description: AZURE_STORAGE_ACCOUNT_ACCESS_KEY
+                            type: string
+                          subscriptionId:
+                            description: AZURE_BACKUP_SUBSCRIPTION_ID
+                            type: string
+                        required:
+                        - resourceGroup
+                        - storageAccount
+                        type: object
+                      credentialMap:
+                        properties:
+                          from:
+                            type: string
+                          namespaceName:
+                            properties:
+                              name:
+                                type: string
+                              namespace:
+                                type: string
+                            required:
+                            - name
+                            - namespace
+                            type: object
+                          to:
+                            type: string
+                        type: object
+                      pluginTag:
+                        type: string
+                      pluginURL:
+                        type: string
                     type: object
                 type: object
               state:

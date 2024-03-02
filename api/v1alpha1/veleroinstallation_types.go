@@ -47,14 +47,34 @@ type VeleroInstallationSpec struct {
 }
 
 type Provider struct {
-	AWS *AWS `json:"aws,omitempty"`
+	AWS   *AWS   `json:"aws,omitempty"`
+	Azure *Azure `json:"azure,omitempty"`
 }
 
 type AWS struct {
+	// +optional
+	PluginURL string `json:"pluginURL"`
+
+	// +optional
+	PluginTag string `json:"pluginTag"`
+
 	CredentialMap CredentialMap `json:"credentialMap,omitempty"`
 
 	// +optional
 	Config AWSConfig `json:"config,omitempty"`
+}
+
+type Azure struct {
+	// +optional
+	PluginURL string `json:"pluginURL"`
+
+	// +optional
+	PluginTag string `json:"pluginTag"`
+
+	CredentialMap CredentialMap `json:"credentialMap,omitempty"`
+
+	// +optional
+	Config AzureConfig `json:"config,omitempty"`
 }
 
 type AWSConfig struct {
@@ -65,6 +85,21 @@ type AWSConfig struct {
 	S3Url string `json:"s3Url,omitempty"`
 }
 
+type AzureConfig struct {
+	// AZURE_BACKUP_RESOURCE_GROUP
+	ResourceGroup string `json:"resourceGroup"`
+
+	// AZURE_STORAGE_ACCOUNT_ID
+	StorageAccount string `json:"storageAccount"`
+
+	// AZURE_STORAGE_ACCOUNT_ACCESS_KEY
+	// +optional
+	StorageAccountKeyEnvVar string `json:"storageAccountKeyEnvVar"`
+
+	// AZURE_BACKUP_SUBSCRIPTION_ID
+	// +optional
+	SubscriptionId string `json:"subscriptionId"`
+}
 type VeleroHelmState struct {
 	DeployNodeAgent bool `json:"deployNodeAgent"`
 	CleanUpCRDs     bool `json:"cleanUpCRDs"`
