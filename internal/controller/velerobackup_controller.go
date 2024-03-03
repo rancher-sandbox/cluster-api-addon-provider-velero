@@ -59,12 +59,12 @@ func (r *VeleroBackupReconciler) SetupWithManager(ctx context.Context, mgr ctrl.
 //
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.17.0/pkg/reconcile
-func (r *VeleroBackupReconciler) Reconcile(ctx context.Context, clusterRef client.ObjectKey, installation *veleroaddonv1.VeleroInstallation, backup *veleroaddonv1.VeleroBackup) (ctrl.Result, error) {
+func (r *VeleroBackupReconciler) Reconcile(ctx context.Context, _ client.ObjectKey, installation *veleroaddonv1.VeleroInstallation, backup *veleroaddonv1.VeleroBackup) (ctrl.Result, error) {
 	_ = log.FromContext(ctx)
 
 	r.Backup = &velerov1.Backup{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      backup.Name + "-" + clusterRef.Name,
+			Name:      backup.Name,
 			Namespace: cmp.Or(installation.Spec.HelmSpec.ReleaseNamespace, installation.Spec.Namespace, "velero"),
 			Annotations: map[string]string{
 				proxyKeyAnnotation: string(veleroaddonv1.ToNamespaceName(backup)),

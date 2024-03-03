@@ -60,12 +60,12 @@ func (r *VeleroScheduleReconciler) SetupWithManager(ctx context.Context, mgr ctr
 //
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.17.0/pkg/reconcile
-func (r *VeleroScheduleReconciler) Reconcile(ctx context.Context, clusterRef client.ObjectKey, installation *veleroaddonv1.VeleroInstallation, schedule *veleroaddonv1.VeleroSchedule) (ctrl.Result, error) {
+func (r *VeleroScheduleReconciler) Reconcile(ctx context.Context, _ client.ObjectKey, installation *veleroaddonv1.VeleroInstallation, schedule *veleroaddonv1.VeleroSchedule) (ctrl.Result, error) {
 	_ = log.FromContext(ctx)
 
 	r.Schedule = &velerov1.Schedule{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      schedule.Name + "-" + clusterRef.Name,
+			Name:      schedule.Name,
 			Namespace: cmp.Or(installation.Spec.HelmSpec.ReleaseNamespace, installation.Spec.Namespace, "velero"),
 			Annotations: map[string]string{
 				proxyKeyAnnotation: string(veleroaddonv1.ToNamespaceName(schedule)),

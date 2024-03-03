@@ -49,6 +49,7 @@ type VeleroInstallationSpec struct {
 type Provider struct {
 	AWS   *AWS   `json:"aws,omitempty"`
 	Azure *Azure `json:"azure,omitempty"`
+	GCP   *GCP   `json:"gcp,omitempty"`
 }
 
 type AWS struct {
@@ -77,6 +78,18 @@ type Azure struct {
 	Config AzureConfig `json:"config,omitempty"`
 }
 
+type GCP struct {
+	// +optional
+	PluginURL string `json:"pluginURL"`
+
+	// +optional
+	PluginTag string `json:"pluginTag"`
+
+	CredentialMap CredentialMap `json:"credentialMap,omitempty"`
+
+	Config GCPConfig `json:"config,omitempty"`
+}
+
 type AWSConfig struct {
 	// +optional
 	Region string `json:"region,omitempty"`
@@ -100,6 +113,40 @@ type AzureConfig struct {
 	// +optional
 	SubscriptionId string `json:"subscriptionId"`
 }
+
+type GCPConfig struct {
+	// Name of the GCP service account to use for this backup storage location. Specify the
+	// service account here if you want to use workload identity instead of providing the key file.
+	//
+	// Optional (defaults to "false").
+	// +optional
+	ServiceAccount string `json:"serviceAccount"`
+
+	// Name of the Cloud KMS key to use to encrypt backups stored in this location, in the form
+	// "projects/P/locations/L/keyRings/R/cryptoKeys/K". See customer-managed Cloud KMS keys
+	// (https://cloud.google.com/storage/docs/encryption/using-customer-managed-keys) for details.
+	// +optional
+	KMSKeyName string `json:"kmsKeyName"`
+
+	// The GCP location where snapshots should be stored. See the GCP documentation
+	// (https://cloud.google.com/storage/docs/locations#available_locations) for the
+	// full list. If not specified, snapshots are stored in the default location
+	// (https://cloud.google.com/compute/docs/disks/create-snapshots#default_location).
+	//
+	// Example: us-central1
+	// +optional
+	SnapshotLocation string `json:"snapshotLocation,omitempty"`
+
+	// The project ID where existing snapshots should be retrieved from during restores, if
+	// different than the project that your IAM account is in. This field has no effect on
+	// where new snapshots are created; it is only useful for restoring existing snapshots
+	// from a different project.
+	//
+	// Optional (defaults to the project that the GCP IAM account is in).
+	// Example: my-alternate-project
+	Project string `json:"project,omitempty"`
+}
+
 type VeleroHelmState struct {
 	DeployNodeAgent bool `json:"deployNodeAgent"`
 	CleanUpCRDs     bool `json:"cleanUpCRDs"`
