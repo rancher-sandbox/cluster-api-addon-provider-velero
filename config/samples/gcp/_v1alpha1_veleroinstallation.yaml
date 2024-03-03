@@ -1,0 +1,24 @@
+apiVersion: addons.cluster.x-k8s.io/v1alpha1
+kind: VeleroInstallation
+metadata:
+  labels:
+    app.kubernetes.io/name: veleroinstallation
+    app.kubernetes.io/instance: gcpinstallation-sample
+    app.kubernetes.io/part-of: cluster-api-addon-provider-velero
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: cluster-api-addon-provider-velero
+  name: gcpinstallation-sample
+  namespace: creategitops-me7ee7
+spec:
+  bucket: dgrigore-bucket
+  namespace: velero-gcp
+  provider:
+    gcp:
+      credentialMap:
+        namespaceName:
+          name: gcp-credentials
+          namespace: default
+  state:
+    deployNodeAgent: true
+    cleanUpCRDs: true
+    credentials: {}

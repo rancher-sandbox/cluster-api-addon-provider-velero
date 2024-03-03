@@ -22,6 +22,8 @@ func (p Provider) Name() string {
 		return "aws"
 	case p.Azure != nil:
 		return "azure"
+	case p.GCP != nil:
+		return "velero.io/gcp"
 	default:
 		panic("Unknown type of provider supplied")
 	}
