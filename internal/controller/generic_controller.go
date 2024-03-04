@@ -45,6 +45,9 @@ const (
 	finalizer          = "addons.cluster.x-k8s.io/velero"
 )
 
+//+kubebuilder:rbac:groups=cluster.x-k8s.io,resources=clusters,verbs=get;list;watch
+//+kubebuilder:rbac:groups=cluster.x-k8s.io,resources=clusters/status,verbs=get
+
 // GenericReconciler is a generic interface for velero objects reconciler
 type GenericReconciler[P veleroaddonv1.VeleroProxy[V], V veleroaddonv1.VeleroOrigin] interface {
 	client.Client

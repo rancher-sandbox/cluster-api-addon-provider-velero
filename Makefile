@@ -189,7 +189,7 @@ GOLANGCI_LINT := $(abspath $(TOOLS_BIN_DIR)/$(GOLANGCI_LINT_BIN))
 # Define Docker related variables. Releases should modify and double check these vars.
 # REGISTRY ?= gcr.io/$(shell gcloud config get-value project)
 REGISTRY ?= ghcr.io/danil-grigorev
-PROD_REGISTRY ?= registry.k8s.io/cluster-api-helm
+PROD_REGISTRY ?= ghcr.io/danil-grigorev
 
 STAGING_REGISTRY ?= gcr.io/k8s-staging-cluster-api-velero
 STAGING_BUCKET ?= artifacts.k8s-staging-cluster-api-velero.appspot.com
