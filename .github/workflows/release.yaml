@@ -38,9 +38,9 @@ jobs:
           echo "OWNER=$(echo $GITHUB_ACTOR | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
           echo "REGISTRY=$(echo $REGISTRY | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
       - name: Build docker image
-        run: make docker-build-all
+        run: make docker-build-all TAG=${{ env.RELEASE_TAG }}
       - name: Push docker image
-        run: make docker-push-all
+        run: make docker-push-all TAG=${{ env.RELEASE_TAG }}
 
   publish:
     name: Publish the draft release
