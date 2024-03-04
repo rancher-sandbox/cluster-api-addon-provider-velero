@@ -7,5 +7,5 @@ spec:
   template:
     spec:
       containers:
-      - image: ghcr.io/danil-grigorev/cluster-api-velero-controller-amd64:dev
+      - image: ghcr.io/danil-grigorev/cluster-api-velero-controller:dev
         name: manager
