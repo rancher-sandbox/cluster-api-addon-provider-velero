@@ -47,46 +47,66 @@ type VeleroInstallationSpec struct {
 }
 
 type Provider struct {
-	AWS   *AWS   `json:"aws,omitempty"`
+	// AWS contains AWS plugin specific configuration values
+	AWS *AWS `json:"aws,omitempty"`
+
+	// Azure contains Azure plugin specific configuration values
 	Azure *Azure `json:"azure,omitempty"`
-	GCP   *GCP   `json:"gcp,omitempty"`
+
+	// GCP contains GCP plugin specific configuration values
+	GCP *GCP `json:"gcp,omitempty"`
 }
 
 type AWS struct {
+	// PluginURL is a URL of the plugin image to download from. Defaults to "velero/velero-plugin-for-aws".
 	// +optional
 	PluginURL string `json:"pluginURL"`
 
+	// PluginTag is a specific tag to install the plugin from. Defaults to "latest”"
 	// +optional
 	PluginTag string `json:"pluginTag"`
 
+	// CredentialMap is a secret proxy mapping for plugin to sync into each selected cluster.
+	// The secret will be used by Velero for accessing BackupStorageLocations and VolumeStorageLocations.
 	CredentialMap CredentialMap `json:"credentialMap,omitempty"`
 
+	// AWSConfig is AWS specific config
 	// +optional
 	Config AWSConfig `json:"config,omitempty"`
 }
 
 type Azure struct {
+	// PluginURL is a URL of the plugin image to download from. Defaults to "velero/velero-plugin-for-microsoft-azure".
 	// +optional
 	PluginURL string `json:"pluginURL"`
 
+	// PluginTag is a specific tag to install the plugin from. Defaults to "latest”"
 	// +optional
 	PluginTag string `json:"pluginTag"`
 
+	// CredentialMap is a secret proxy mapping for plugin to sync into each selected cluster.
+	// The secret will be used by Velero for accessing BackupStorageLocations and VolumeStorageLocations.
 	CredentialMap CredentialMap `json:"credentialMap,omitempty"`
 
+	// AzureConfig is Azure specific config.
 	// +optional
 	Config AzureConfig `json:"config,omitempty"`
 }
 
 type GCP struct {
+	// PluginURL is a URL of the plugin image to download from. Defaults to "velero/velero-plugin-for-gcp".
 	// +optional
 	PluginURL string `json:"pluginURL"`
 
+	// PluginTag is a specific tag to install the plugin from. Defaults to "latest”"
 	// +optional
 	PluginTag string `json:"pluginTag"`
 
+	// CredentialMap is a secret proxy mapping for plugin to sync into each selected cluster.
+	// The secret will be used by Velero for accessing BackupStorageLocations and VolumeStorageLocations.
 	CredentialMap CredentialMap `json:"credentialMap,omitempty"`
 
+	// GCPConfig is GCP specific config.
 	Config GCPConfig `json:"config,omitempty"`
 }
 
@@ -148,10 +168,16 @@ type GCPConfig struct {
 }
 
 type VeleroHelmState struct {
+	// DeployNodeAgent is a directive for installing velero node agent for performing volume snapshots. Defaults to false.
+	// +optional
 	DeployNodeAgent bool `json:"deployNodeAgent"`
-	CleanUpCRDs     bool `json:"cleanUpCRDs"`
 
-	// Configuration is a bucket configuration
+	// CleanUpCRDs ensures that velero CRDs will be uninstalled with the helm chart proxy. Defaults to false.
+	// +optional
+	CleanUpCRDs bool `json:"cleanUpCRDs"`
+
+	// Configuration is a backup/volume storage location configuration data.
+	// By default is provisioned based on the VeleroInstallationSpec values, but can be extended with additional values.
 	// +optional
 	Configuration Configuration `json:"configuration,omitempty"`
 
@@ -161,6 +187,8 @@ type VeleroHelmState struct {
 	// +optional
 	Credentials Credentials `json:"credentials,omitempty"`
 
+	// InitContainers is a list of init containers required to install a plugin in the cluster. User can’t specify these values directly,
+	// and the provider plugin implementation is responsible for populating this field and passing to the helm chart proxy.
 	//+optional
 	InitContainers []corev1.Container `json:"initContainers,omitempty"`
 }
@@ -178,6 +206,8 @@ type VolumeSnapshotLocation struct {
 	// The name for the backup storage provider.
 	Provider string `json:"provider"`
 
+	// CredentialKey is a mapping between secret name and value key, for plugin implementation to sync
+	// into each selected cluster. The secret will be used by Velero for accessing BackupStorageLocation.
 	CredentialKey CredentialKey `json:"credential,omitempty"`
 
 	// Config containe additional provider-specific configuration. See link above
@@ -213,6 +243,8 @@ type BackupStorageLocation struct {
 	// Access mode for this backup storage location. Defaults to ReadWrite.
 	AccessMode AccessMode `json:"accessMode,omitempty"`
 
+	// CredentialKey is a mapping between secret name and value key, for plugin implementation to sync
+	// into each selected cluster. The secret will be used by Velero for accessing BackupStorageLocation.
 	CredentialKey CredentialKey `json:"credential,omitempty"`
 
 	// Config containe additional provider-specific configuration. See link above
@@ -253,7 +285,7 @@ const (
 )
 
 type Credentials struct {
-	// Set to false if not using a secret for credentials (i.e., use KIAM or WID)
+	// Set to false if not using a secret for credentials (i.e., using IAM)
 	UseSecret bool `json:"useSecret,omitempty"`
 
 	// If set, name of pre-existing Velero secret to be used in case of 'useSecret=true' and empty 'existingSecret'.
