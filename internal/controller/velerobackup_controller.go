@@ -25,8 +25,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -40,8 +42,26 @@ type VeleroBackupReconciler struct {
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *VeleroBackupReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager, options controller.Options) (err error) {
-	r.Controller, err = r.Reconciler.SetupWithManager(ctx, mgr, options).Build(
-		reconcile.AsReconciler(r.Client, AsVeleroReconciler(r.Client, r)))
+	b := r.Reconciler.SetupWithManager(ctx, mgr, options)
+
+	r.Controller, err = b.
+		Add(builder.Watches(b, &veleroaddonv1.VeleroInstallation{}, handler.EnqueueRequestsFromObjectMap(r.fromInstallation))).
+		Build(reconcile.AsReconciler(r.Client, AsVeleroReconciler(r.Client, r)))
+
+	return
+}
+
+func (r *VeleroBackupReconciler) fromInstallation(ctx context.Context, inst *veleroaddonv1.VeleroInstallation) (req []ctrl.Request) {
+	l := &veleroaddonv1.VeleroBackupList{}
+	if err := r.Client.List(ctx, l); err != nil {
+		return
+	}
+
+	for _, backup := range l.Items {
+		if backup.GetInstallRef().Name == inst.Name && backup.GetInstallRef().Namespace == inst.Namespace {
+			req = append(req, ctrl.Request{NamespacedName: client.ObjectKeyFromObject(&backup)})
+		}
+	}
 
 	return
 }

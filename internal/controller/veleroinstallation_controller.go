@@ -22,6 +22,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/cluster-api/controllers/remote"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -84,8 +85,10 @@ func (r *VeleroInstallationReconciler) Reconcile(ctx context.Context, installati
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *VeleroInstallationReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewControllerManagedBy(mgr).
-		For(&veleroaddonv1.VeleroInstallation{}).
-		Owns(&helmv1.HelmChartProxy{}).
+	b := ctrl.NewControllerManagedBy(mgr)
+
+	return b.
+		Add(builder.For(b, &veleroaddonv1.VeleroInstallation{})).
+		Add(builder.Owns(b, &veleroaddonv1.VeleroInstallation{}, &helmv1.HelmChartProxy{})).
 		Complete(reconcile.AsReconciler(r.Client, r))
 }

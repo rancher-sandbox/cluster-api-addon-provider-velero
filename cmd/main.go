@@ -111,7 +111,7 @@ func main() {
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme: scheme,
 		Metrics: metricsserver.Options{
-			BindAddress:   metricsAddr,
+			BindAddress:   "0",
 			SecureServing: secureMetrics,
 			TLSOpts:       tlsOpts,
 		},
