@@ -16,7 +16,7 @@ jobs:
         working-directory:
           - ""
     steps:
-      - uses: actions/checkout@24cb9080177205b6e8c946b17badbe402adc938f # tag=v3.4.0
+      - uses: actions/checkout@1d96c772d19495a3b5c517cd2bc0cb401ea0529f # tag=v4.1.3
       - name: Set up Go
         uses: actions/setup-go@6edd4406fa81c3da01a34fa6f6343087c207a568 # tag=v3.5.0
         with:
