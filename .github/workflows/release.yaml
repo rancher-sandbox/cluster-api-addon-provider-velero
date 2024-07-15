@@ -24,7 +24,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: Install go
-        uses: actions/setup-go@6edd4406fa81c3da01a34fa6f6343087c207a568 # tag=v3.5.0
+        uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # tag=v5.0.2
         with:
           go-version: '^1.22'
       - name: Docker login
@@ -57,7 +57,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: Install go
-        uses: actions/setup-go@6edd4406fa81c3da01a34fa6f6343087c207a568 # tag=v3.5.0
+        uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # tag=v5.0.2
         with:
           go-version: '^1.22'
       - name: Convert actor name to lowercase and store in the env
