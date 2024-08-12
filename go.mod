@@ -1,6 +1,7 @@
 module addons.cluster.x-k8s.io/cluster-api-addon-provider-velero
 
-go 1.22
+go 1.22.2
+
 toolchain go1.22.5
 
 require (
